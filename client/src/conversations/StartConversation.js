@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaSearch } from 'react-icons/fa';
 import config from '../config';
 
-const StartConversation = ({ onClose }) => {
+const StartConversation = ({ onClose, closePopup }) => {
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
@@ -98,6 +98,9 @@ const StartConversation = ({ onClose }) => {
                         ))}
                     </div>
                 )}
+                <button onClick={closePopup} className="w-full bg-[#fd6254] text-white py-2 rounded-lg text-center font-semibold hover:bg-[#FF6F61] focus:outline-none mt-3 transform transition-all duration-300 ease-in-out">
+                    Cancel
+                </button>
             </div>
         </div>
     );

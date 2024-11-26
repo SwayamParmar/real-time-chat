@@ -68,6 +68,10 @@ const ConversationList = ({ onSelectUser }) => {
         }
     };
 
+    const startConversationPopup = () => {
+        setIsModalOpen(false);
+    };
+
     return (
         <div className="w-96 bg-[#f5f7fb] border-r border-gray-200">
             <div className="w-96 bg-[#fff] pb-1">
@@ -131,6 +135,7 @@ const ConversationList = ({ onSelectUser }) => {
             {isModalOpen && (
                 <StartConversation
                     onClose={handleModalClose}
+                    closePopup={startConversationPopup}
                 />
             )}
             </div>
