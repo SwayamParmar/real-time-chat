@@ -1,65 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { FaSearch } from 'react-icons/fa';
-import config from '../config';
+import { useConversation } from "../conversationContext/ConversationContext";
 
 const StartConversation = ({ onClose, closePopup }) => {
-    const [users, setUsers] = useState([]);
+    const { users, fetchUsers, startConversation, loadingUsers } = useConversation();
     const [searchTerm, setSearchTerm] = useState('');
-    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            try {
-                const token = localStorage.getItem('token');
-                const res = await fetch(`${config.API_BASE_URL}/user`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`, // Correctly formatted header
-                    },
-                });
-                if (!res.ok) throw new Error(`Error: ${res.statusText}`);
-                const data = await res.json();
-
-                // Simulate a delay before setting users
-                setTimeout(() => {
-                    setUsers(data.users);
-                    setLoading(false);
-                }, 500); // 2-second delay
-            } catch (error) {
-                console.error('Error fetching users:', error);
-                setLoading(false);
-            }
-        };
-
         fetchUsers();
-    }, []);
+    }, [fetchUsers]);
 
     const handleStartConversation = async (user) => {
         const currentUser = JSON.parse(localStorage.getItem("user"));
-        const token = localStorage.getItem("token");
-
-        const newConversation = {
-            sender: currentUser.id,
-            receiver: user._id,
-        };
-
-        try {
-            const res = await fetch(`${config.API_BASE_URL}/conversations/start`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(newConversation),
-            });
-
-            if (!res.ok) throw new Error("Error starting conversation");
-            const data = await res.json();
-
-            onClose(data.conversation); // Pass the conversation back to the parent
-        } catch (error) {
-            console.error("Error starting conversation:", error);
-        }
+        const newConversation = await startConversation(currentUser.id, user._id);
+        onClose(newConversation);
     };
 
     const filteredUsers = users.filter(user =>
@@ -80,7 +34,7 @@ const StartConversation = ({ onClose, closePopup }) => {
                         className="flex-1 bg-transparent outline-none text-[#1F2937]"
                     />
                 </div>
-                {loading ? (
+                {loadingUsers ? (
                     <div className="text-center text-lg">Loading users...</div>
                 ) : (
                     <div className="max-h-[350px] overflow-y-auto">

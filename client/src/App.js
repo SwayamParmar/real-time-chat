@@ -8,7 +8,7 @@ import Home from './pages/Home';
 import Footer from './components/Footer';
 import Conversation from './pages/Conversation';
 import PrivateRoute from './PrivateRoute';
-// import { ConversationProvider } from './conversationContext/ConversationContext';
+import { ConversationProvider } from './conversationContext/ConversationContext';
 
 const App = () => {
     const location = useLocation(); // Get current location
@@ -44,9 +44,9 @@ const App = () => {
             element={
               <PrivateRoute>
                 {/* Wrap the Conversation component with ConversationProvider */}
-                {/* <ConversationProvider> */}
+                <ConversationProvider>
                   <Conversation />
-                {/* </ConversationProvider> */}
+                </ConversationProvider>
               </PrivateRoute>
             } 
           />

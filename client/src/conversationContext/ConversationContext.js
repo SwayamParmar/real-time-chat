@@ -1,81 +1,96 @@
-// import React, { createContext, useState, useEffect } from 'react';
-// import io from 'socket.io-client';
+import React, { createContext, useContext, useState, useCallback } from "react";
+import config from "../config";
 
-// const ConversationContext = createContext();
+const ConversationContext = createContext();
 
-// const ConversationProvider = ({ children }) => {
-//     const [conversations, setConversations] = useState([]);
-//     const [selectedUser, setSelectedUser] = useState(null);
-//     const [messages, setMessages] = useState([]);
-//     const [socket, setSocket] = useState(null);
+export const ConversationProvider = ({ children }) => {
+    const [conversations, setConversations] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [loadingConversations, setLoadingConversations] = useState(false);
+    const [loadingUsers, setLoadingUsers] = useState(false);
 
-//     useEffect(() => {
-//         const newSocket = io.connect('http://localhost:5000', {
-//             auth: { token: localStorage.getItem('token') }, // Pass token for authentication
-//         });
-//         setSocket(newSocket);
+    const token = localStorage.getItem('token');
 
-//         // Listen for new messages
-//         newSocket.on('receiveMessage', (message) => {
-//             setMessages((prev) => [...prev, message]);
-//         });
+    // Fetch all conversations
+    const fetchConversations = useCallback(async () => {
+        try {
+            setLoadingConversations(true);
+            const res = await fetch(`${config.API_BASE_URL}/conversations`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error("Failed to fetch conversations");
+            const data = await res.json();
+            setConversations(data.conversations);
+            setLoadingConversations(false);
+        } catch (error) {
+            console.error("Error fetching conversations:", error);
+            setLoadingConversations(false);
+        }
+    }, [token]);
 
-//         return () => {
-//             newSocket.disconnect();
-//         };
-//     }, []);
 
-//     // Fetch conversations
-//     const fetchConversations = async () => {
-//         try {
-//             const res = await fetch('/api/conversations', {
-//                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-//             });
-//             const data = await res.json();
-//             setConversations(data.conversations);
-//         } catch (error) {
-//             console.error('Error fetching conversations:', error);
-//         }
-//     };
+    // Fetch all users
+    const fetchUsers = useCallback(async () => {
+        try {
+            setLoadingUsers(true);
+            const res = await fetch(`${config.API_BASE_URL}/user`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!res.ok) throw new Error("Failed to fetch users");
+            const data = await res.json();
+            setTimeout(() => {
+                setUsers(data.users);
+                setLoadingUsers(false);
+            }, 500);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            setLoadingUsers(false); // Set loading to false after fetch
+        }
+    }, [token]);
 
-//     // Fetch messages for a selected user
-//     const fetchMessages = async (conversationId) => {
-//         try {
-//             const res = await fetch(`/api/conversations/${conversationId}/messages`, {
-//                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-//             });
-//             const data = await res.json();
-//             setMessages(data.messages);
-//         } catch (error) {
-//             console.error('Error fetching messages:', error);
-//         }
-//     };
 
-//     // Send a message
-//     const sendMessage = async (messageData) => {
-//         try {
-//             socket.emit('sendMessage', messageData);
-//             setMessages((prev) => [...prev, messageData]);
-//         } catch (error) {
-//             console.error('Error sending message:', error);
-//         }
-//     };
+    // Start a new conversation
+    const startConversation = async (senderId, receiverId) => {
+        try {
+            const res = await fetch(`${config.API_BASE_URL}/conversations/start`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ sender: senderId, receiver: receiverId }),
+            });
+            if (!res.ok) throw new Error("Failed to start conversation");
+            const data = await res.json();
+            setConversations((prev) => [data.conversation, ...prev]);
+            return data.conversation;
+        } catch (error) {
+            console.error("Error starting conversation:", error);
+            throw error;
+        }
+    };
 
-//     return (
-//         <ConversationContext.Provider
-//             value={{
-//                 conversations,
-//                 selectedUser,
-//                 messages,
-//                 setSelectedUser,
-//                 fetchConversations,
-//                 fetchMessages,
-//                 sendMessage,
-//             }}
-//         >
-//             {children}
-//         </ConversationContext.Provider>
-//     );
-// };
 
-// export { ConversationContext, ConversationProvider };
+    // Provide state and functions
+    return (
+        <ConversationContext.Provider
+            value={{
+                conversations,
+                users,
+                loadingConversations,
+                loadingUsers,
+                fetchConversations,
+                fetchUsers,
+                startConversation,
+            }}
+        >
+            {children}
+        </ConversationContext.Provider>
+    );
+};
+
+export const useConversation = () => useContext(ConversationContext);
