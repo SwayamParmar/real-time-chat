@@ -3,7 +3,7 @@ import { FaSearch } from 'react-icons/fa';
 import { useConversation } from "../conversationContext/ConversationContext";
 
 const StartConversation = ({ onClose, closePopup }) => {
-    const { users, fetchUsers, startConversation, loadingUsers } = useConversation();
+    const { users, fetchUsers, startConversation, loadingUsers, conversations } = useConversation();
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
@@ -12,8 +12,19 @@ const StartConversation = ({ onClose, closePopup }) => {
 
     const handleStartConversation = async (user) => {
         const currentUser = JSON.parse(localStorage.getItem("user"));
-        const newConversation = await startConversation(currentUser.id, user._id);
-        onClose(newConversation);
+        // Check if the user already exists in the conversation list
+        const existingConversation = conversations.find((chat) => {
+            const isSender = chat.sender._id === currentUser.id;
+            const otherUser = isSender ? chat.receiver : chat.sender;
+            return otherUser._id === user._id;
+        });
+
+        if (existingConversation) {
+            onClose(existingConversation); // Activate the existing conversation
+        } else {
+            const newConversation = await startConversation(currentUser.id, user._id);
+            onClose(newConversation); // Add a new conversation and activate it
+        }
     };
 
     const filteredUsers = users.filter(user =>

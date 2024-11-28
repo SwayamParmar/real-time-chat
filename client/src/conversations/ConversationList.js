@@ -75,26 +75,26 @@ const ConversationList = ({ onSelectUser }) => {
 
                         return (
                             <div
-                                    key={index}
-                                    className={`flex items-center gap-4 p-4 cursor-pointer rounded-sm ${
-                                        activeChat === chat._id ? 'bg-[#e8f0f8]' : 'hover:bg-[#e8f0f8]'
-                                    }`}
-                                    onClick={() => handleChatClick(chat)}
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                                        {/* {otherUser.name[0]} */}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-medium">{otherUser.name}</p>
-                                        <p className="text-sm text-gray-500 truncate">
-                                            {chat && chat.content === '' ? chat.content : chat.content.length > 20 ? `${chat.content.slice(0, 25)}...` : chat.content }
-                                        </p>
-                                    </div>
-                                    <span className="text-xs text-gray-400">
-                                        {/* {formatDistanceToNow(new Date(chat.created_at), { addSuffix: true })} */}
-                                        Just Now
-                                    </span>
+                                key={index}
+                                className={`flex items-center gap-4 p-4 cursor-pointer rounded-sm ${
+                                    activeChat === chat._id ? 'bg-[#e8f0f8]' : 'hover:bg-[#e8f0f8]'
+                                }`}
+                                onClick={() => handleChatClick(chat)}
+                            >
+                                <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                                    {/* {otherUser.name[0]} */}
                                 </div>
+                                <div className="flex-1">
+                                    <p className="font-medium">{otherUser.name}</p>
+                                    <p className="text-sm text-gray-500 truncate">
+                                        {chat && chat.content === '' ? chat.content : chat.content.length > 20 ? `${chat.content.slice(0, 25)}...` : chat.content }
+                                    </p>
+                                </div>
+                                <span className="text-xs text-gray-400">
+                                    {/* {formatDistanceToNow(new Date(chat.created_at), { addSuffix: true })} */}
+                                    Just Now
+                                </span>
+                            </div>
                         );
                     })
                 ) : (

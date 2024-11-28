@@ -1,75 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { FaEllipsisV, FaPaperPlane } from 'react-icons/fa';
 import { FaSearch } from 'react-icons/fa';
-import config from '../config';
+import { useConversation } from "../conversationContext/ConversationContext";
 
 const ConversationWindow = ({ selectedUser, toggleAbout }) => {
-    const [showSearch, setShowSearch] = useState(false);
-    const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
-    const conversationId = selectedUser ? selectedUser._id : null;
+    const [showSearch, setShowSearch] = useState(false);
+    const conversationId = selectedUser?._id;
+    const { messages, loadingMessages, fetchMessages, sendMessage, } = useConversation();
 
     // Toggle search visibility
     const toggleSearch = () => setShowSearch((prev) => !prev);
 
-    // Fetch messages for the selected conversation
+    // Fetch messages when a new conversation is selected
     useEffect(() => {
-        const fetchMessages = async () => {
-            if (conversationId) {
-                try {
-                    const token = localStorage.getItem('token');
-                    const res = await fetch(`${config.API_BASE_URL}/messages/${conversationId}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    });
-                    if (!res.ok) throw new Error(`Error fetching messages`);
-                    const data = await res.json();
-                    setMessages(data.messages); // Store messages in state
-                } catch (error) {
-                    console.error('Error fetching messages:', error);
-                }
-            }
-        };
+        if (conversationId) {
+            fetchMessages(conversationId);
+        }
+    }, [conversationId, fetchMessages]);
 
-        fetchMessages();
-    }, [conversationId]);
-
-    // Handle sending a new message
-    const handleSendMessage = async () => {
+    // Handle sending a message
+    const handleSendMessage = () => {
         if (!newMessage.trim()) return; // Don't send if the message is empty
 
-        const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user'));
         const senderId = user?.id;
-        // Correctly determine the receiver based on the current conversation
-        const receiverId = selectedUser?.sender?._id === senderId ? selectedUser.receiver?._id : selectedUser.sender?._id;
+        const receiverId =
+            selectedUser?.sender?._id === senderId
+                ? selectedUser.receiver?._id
+                : selectedUser.sender?._id;
 
-        const messageData = {
+        sendMessage({
             conversationId,
-            sender: senderId, // Assuming you're storing user ID in localStorage
+            sender: senderId,
             receiver: receiverId,
             content: newMessage,
-        };
-
-        try {
-            const res = await fetch('http://localhost:5000/api/messages/storeMessage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(messageData),
-            });
-
-            if (!res.ok) throw new Error('Error sending message');
-            const data = await res.json();
-
-            setMessages((prevMessages) => [...prevMessages, data.message]); // Add the new message to the state
-            setNewMessage(''); // Clear the input
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
+        });
+        setNewMessage(''); // Clear input
     };
 
     return (
@@ -119,9 +86,16 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
 
                     {/* Messages */}
                     <div className="flex-1 p-4 space-y-4 overflow-y-scroll hide-scrollbar">
-                        {messages.length > 0 ? (
-                            messages.map((msg, index) => (
-                                <div key={index} className={`flex ${msg.sender._id === JSON.parse(localStorage.getItem('user')).id ? 'justify-end' : 'justify-start'}`}>
+                        {loadingMessages ? (
+                                <p>Loading messages...</p>
+                            ) : messages.length > 0 ? (
+                                messages.map((msg, index) => (
+                                    <div
+                                        key={index}
+                                        className={`flex ${
+                                            msg.sender._id === JSON.parse(localStorage.getItem('user')).id ? 'justify-end' : 'justify-start'
+                                        }`}
+                                    >
                                     <div className="bg-blue-100 p-3 rounded-lg max-w-xs">
                                         <p>{msg.content}</p>
                                         <span className="text-xs text-gray-400">{new Date(msg.created_at).toLocaleTimeString()}</span>
@@ -129,7 +103,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
                                 </div>
                             ))
                         ) : (
-                            <div>No messages yet</div>
+                            <p>No messages yet</p>
                         )}
                     </div>
 
