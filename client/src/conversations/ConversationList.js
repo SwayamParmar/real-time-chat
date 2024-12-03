@@ -3,6 +3,7 @@ import { FaSearch } from 'react-icons/fa';
 import { RiChatNewFill } from "react-icons/ri";
 import StartConversation from './StartConversation';
 import { useConversation } from "../conversationContext/ConversationContext";
+import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
 
 const ConversationList = ({ onSelectUser }) => {
     const { conversations, fetchConversations, loadingConversations } = useConversation(); // Use context
@@ -91,8 +92,7 @@ const ConversationList = ({ onSelectUser }) => {
                                     </p>
                                 </div>
                                 <span className="text-xs text-gray-400">
-                                    {/* {formatDistanceToNow(new Date(chat.created_at), { addSuffix: true })} */}
-                                    Just Now
+                                    {formatTimestampOnList(chat.updated_at)}
                                 </span>
                             </div>
                         );

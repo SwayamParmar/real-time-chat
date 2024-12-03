@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaEllipsisV, FaPaperPlane } from 'react-icons/fa';
 import { FaSearch } from 'react-icons/fa';
 import { useConversation } from "../conversationContext/ConversationContext";
+import { formatTimestampOnWindow } from "../timeFormat/formatTimestamp";
 
 const ConversationWindow = ({ selectedUser, toggleAbout }) => {
     const [newMessage, setNewMessage] = useState('');
@@ -98,7 +99,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
                                     >
                                     <div className="bg-blue-100 p-3 rounded-lg max-w-xs">
                                         <p>{msg.content}</p>
-                                        <span className="text-xs text-gray-400">{new Date(msg.created_at).toLocaleTimeString()}</span>
+                                        <span className="text-xs text-gray-400">{formatTimestampOnWindow(msg.created_at)}</span>
                                     </div>
                                 </div>
                             ))
