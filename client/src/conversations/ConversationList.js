@@ -6,7 +6,7 @@ import { useConversation } from "../conversationContext/ConversationContext";
 import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
 
 const ConversationList = ({ onSelectUser }) => {
-    const { conversations, fetchConversations, loadingConversations } = useConversation(); // Use context
+    const { conversations, currentLoggedInUser, fetchConversations, loadingConversations } = useConversation(); // Use context
     const [searchTerm, setSearchTerm] = useState('');
     const [activeChat, setActiveChat] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,8 +18,7 @@ const ConversationList = ({ onSelectUser }) => {
 
     // Filter conversations based on the search term
     const filteredChats = conversations.filter((chat) => {
-        const currentUserId = JSON.parse(localStorage.getItem('user')).id;
-        const isSender = chat.sender._id === currentUserId;
+        const isSender = chat.sender._id === currentLoggedInUser.id;
         const otherUser = isSender ? chat.receiver : chat.sender;
         return otherUser?.name.toLowerCase().includes(searchTerm.toLowerCase());
     });
@@ -70,8 +69,7 @@ const ConversationList = ({ onSelectUser }) => {
                     <div className="text-center text-gray-600 py-4">Loading conversations...</div>
                 ) : filteredChats.length > 0 ? (
                     filteredChats.map((chat, index) => {
-                        const currentUserId = JSON.parse(localStorage.getItem('user')).id;
-                        const isSender = chat.sender._id === currentUserId;
+                        const isSender = chat.sender._id === currentLoggedInUser.id;
                         const otherUser = isSender ? chat.receiver : chat.sender;
 
                         return (

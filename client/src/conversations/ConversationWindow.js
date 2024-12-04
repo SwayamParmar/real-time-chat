@@ -8,7 +8,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
     const [newMessage, setNewMessage] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const conversationId = selectedUser?._id;
-    const { messages, loadingMessages, fetchMessages, sendMessage, } = useConversation();
+    const { messages, currentLoggedInUser, loadingMessages, fetchMessages, sendMessage, } = useConversation();
 
     // Toggle search visibility
     const toggleSearch = () => setShowSearch((prev) => !prev);
@@ -24,16 +24,14 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
     const handleSendMessage = () => {
         if (!newMessage.trim()) return; // Don't send if the message is empty
 
-        const user = JSON.parse(localStorage.getItem('user'));
-        const senderId = user?.id;
         const receiverId =
-            selectedUser?.sender?._id === senderId
+            selectedUser?.sender?._id === currentLoggedInUser.id
                 ? selectedUser.receiver?._id
                 : selectedUser.sender?._id;
 
         sendMessage({
             conversationId,
-            sender: senderId,
+            sender: currentLoggedInUser.id,
             receiver: receiverId,
             content: newMessage,
         });
@@ -49,7 +47,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
                                 {/* Show the first letter of the other user's name */}
-                                {/* {selectedUser.sender?._id === JSON.parse(localStorage.getItem('user')).id
+                                {/* {selectedUser.sender?._id === currentLoggedInUser.id
                                     ? selectedUser.receiver?.name[0]
                                     : selectedUser.sender?.name[0]
                                 } */}
@@ -57,7 +55,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
                             <div>
                                 <h3 className="font-medium">
                                     {/* Show the full name of the other user */}
-                                    {selectedUser.sender?._id === JSON.parse(localStorage.getItem('user')).id
+                                    {selectedUser.sender?._id === currentLoggedInUser.id
                                         ? selectedUser.receiver?.name
                                         : selectedUser.sender?.name
                                     }
@@ -94,7 +92,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
                                     <div
                                         key={index}
                                         className={`flex ${
-                                            msg.sender._id === JSON.parse(localStorage.getItem('user')).id ? 'justify-end' : 'justify-start'
+                                            msg.sender._id === currentLoggedInUser.id ? 'justify-end' : 'justify-start'
                                         }`}
                                     >
                                     <div className="bg-blue-100 p-3 rounded-lg max-w-xs">
