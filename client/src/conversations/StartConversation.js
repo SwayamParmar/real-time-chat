@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaSearch } from 'react-icons/fa';
 import { useConversation } from "../conversationContext/ConversationContext";
 import debounce from 'lodash.debounce';  // Import debounce utility
@@ -9,13 +9,10 @@ const StartConversation = ({ onClose, closePopup }) => {
     const [filteredUsers, setFilteredUsers] = useState([]);
 
     // Debounced search function
-    const debouncedSearch = useCallback(
-        debounce((term) => {
-            setSearchTerm(term);
-        }, 500), // Delay of 500ms after the user stops typing
-        []
-    );
-    console.log(currentLoggedInUser);
+    const debouncedSearch = debounce((term) => {
+        setSearchTerm(term);
+    }, 500);
+
     useEffect(() => {
         fetchUsers();
     }, [fetchUsers]);
