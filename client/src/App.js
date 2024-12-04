@@ -43,7 +43,6 @@ const App = () => {
           <Route path="/conversations"
             element={
               <PrivateRoute>
-                {/* Wrap the Conversation component with ConversationProvider */}
                 <ConversationProvider>
                   <Conversation />
                 </ConversationProvider>

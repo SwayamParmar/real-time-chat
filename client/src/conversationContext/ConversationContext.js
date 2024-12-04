@@ -12,6 +12,7 @@ export const ConversationProvider = ({ children }) => {
     const [loadingMessages, setLoadingMessages] = useState(false);
 
     const token = localStorage.getItem('token');
+    const currentLoggedInUser = JSON.parse(localStorage.getItem('user'));
 
     // Fetch all conversations
     const fetchConversations = useCallback(async () => {
@@ -140,6 +141,7 @@ export const ConversationProvider = ({ children }) => {
                 fetchMessages,
                 sendMessage,
                 startConversation,
+                currentLoggedInUser,
             }}
         >
             {children}
