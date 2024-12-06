@@ -4,6 +4,7 @@ import { RiChatNewFill } from "react-icons/ri";
 import StartConversation from './StartConversation';
 import { useConversation } from "../conversationContext/ConversationContext";
 import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
+import debounce from 'lodash.debounce';  // Import debounce utility
 
 const ConversationList = ({ onSelectUser }) => {
     const { conversations, currentLoggedInUser, fetchConversations, loadingConversations } = useConversation(); // Use context
@@ -15,6 +16,11 @@ const ConversationList = ({ onSelectUser }) => {
     useEffect(() => {
         fetchConversations();
     }, [fetchConversations]);
+
+    // Debounced search function
+    const debouncedSearch = debounce((term) => {
+        setSearchTerm(term);
+    }, 500);
 
     // Filter conversations based on the search term
     const filteredChats = conversations.filter((chat) => {
@@ -56,8 +62,8 @@ const ConversationList = ({ onSelectUser }) => {
                     <input
                         type="text"
                         placeholder="Search"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        // value={searchTerm}
+                        onChange={(e) => debouncedSearch(e.target.value)}
                         className="flex-1 bg-transparent outline-none text-[#1F2937] mr-2"
                     />
                 </div>
