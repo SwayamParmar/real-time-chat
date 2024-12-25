@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { io } from "socket.io-client";
 import config from "../config";
 
 const ConversationContext = createContext();
@@ -10,9 +11,53 @@ export const ConversationProvider = ({ children }) => {
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [messages, setMessages] = useState([]);
     const [loadingMessages, setLoadingMessages] = useState(false);
+    const [socket, setSocket] = useState(null); // Socket instance
 
     const token = localStorage.getItem('token');
     const currentLoggedInUser = JSON.parse(localStorage.getItem('user'));
+
+    // Initialize and manage the Socket.IO connection
+    useEffect(() => {
+        if (!token) return;
+
+        const socketInstance = io(config.SOCKET_URL, {
+            autoConnect: false, // Prevent automatic connection
+            query: { 
+                token : token, 
+                userId : currentLoggedInUser.id 
+            },
+        });
+
+        socketInstance.connect(); // Explicitly connect the socket
+
+        setSocket(socketInstance);
+
+        socketInstance.on("connect", () => {
+            console.log("Connected to Socket.IO server");
+            socketInstance.emit('joinRoom', { userId: currentLoggedInUser.id });
+        });
+
+        // Handle real-time incoming messages
+        const handleMessage = (message) => {
+            console.log("Real-time message received:", message);
+            setMessages((prev) => {
+                const messageExists = prev.some((msg) => msg._id === message._id);
+                if (!messageExists) {
+                    return [...prev, message];
+                }
+                return prev; // Prevent duplicate messages
+            });
+        };
+
+        socketInstance.on("receiveMessage", handleMessage);
+
+        // Cleanup on unmount
+        return () => {
+            socketInstance.off("receiveMessage", handleMessage); // Remove listener
+            socketInstance.disconnect(); // Disconnect socket
+            console.log("Disconnected from Socket.IO server");
+        };
+    }, [token]);
 
     // Fetch all conversations
     const fetchConversations = useCallback(async () => {
@@ -106,23 +151,41 @@ export const ConversationProvider = ({ children }) => {
 
 
     // Send a new message
-    const sendMessage = async ({ conversationId, sender, receiver, content }) => {
-        if (!content.trim()) return;
+    const sendMessage = async (messageData) => {
+        if (!messageData.content.trim()) return;
 
         try {
+            // Optimistically update messages
+            const optimisticMessage = { ...messageData, isOptimistic: true };
+            setMessages((prev) => [...prev, optimisticMessage]);
+
+            // Emit real-time event
+            socket?.emit("sendMessage", messageData);
+
+            // Persist message to the database
             const res = await fetch(`${config.API_BASE_URL}/messages/storeMessage`, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ conversationId, sender, receiver, content }),
+                body: JSON.stringify(messageData),
             });
-            if (!res.ok) throw new Error('Failed to send message');
-            const data = await res.json();
-            setMessages((prev) => [...prev, data.message]);
+
+            if (!res.ok) throw new Error("Failed to send message");
+
+            const { message: savedMessage } = await res.json();
+
+            // Replace optimistic message with the confirmed message
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg.isOptimistic && msg.content === optimisticMessage.content
+                        ? savedMessage
+                        : msg
+                )
+            );
         } catch (error) {
-            console.error('Error sending message:', error);
+            console.error("Error sending message:", error);
         }
     };
 
@@ -142,6 +205,8 @@ export const ConversationProvider = ({ children }) => {
                 sendMessage,
                 startConversation,
                 currentLoggedInUser,
+                setMessages,
+                socket,
             }}
         >
             {children}

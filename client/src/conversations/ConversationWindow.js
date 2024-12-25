@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaEllipsisV, FaPaperPlane } from 'react-icons/fa';
 import { FaSearch } from 'react-icons/fa';
 import { useConversation } from "../conversationContext/ConversationContext";
@@ -9,6 +9,17 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
     const [showSearch, setShowSearch] = useState(false);
     const conversationId = selectedUser?._id;
     const { messages, currentLoggedInUser, loadingMessages, fetchMessages, sendMessage, } = useConversation();
+    const messageListRef = useRef(null); // Reference to the message list
+    const lastMessageRef = useRef(null); // Reference to the last message
+    // Scroll to the last message when the conversation is opened
+    useEffect(() => {
+        if (messages.length > 0 && messageListRef.current) {
+            const lastMessage = messageListRef.current.lastElementChild;
+            if (lastMessage) {
+                lastMessage.scrollIntoView({ behavior: "smooth", block: "end" });
+            }
+        }
+    }, [messages]); // This effect runs whenever `messages` updates
 
     // Toggle search visibility
     const toggleSearch = () => setShowSearch((prev) => !prev);
@@ -20,22 +31,25 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
         }
     }, [conversationId, fetchMessages]);
 
-    // Handle sending a message
     const handleSendMessage = () => {
-        if (!newMessage.trim()) return; // Don't send if the message is empty
+        if (!newMessage.trim()) return;
 
         const receiverId =
             selectedUser?.sender?._id === currentLoggedInUser.id
                 ? selectedUser.receiver?._id
                 : selectedUser.sender?._id;
 
-        sendMessage({
+        const messageData = {
             conversationId,
             sender: currentLoggedInUser.id,
             receiver: receiverId,
             content: newMessage,
-        });
-        setNewMessage(''); // Clear input
+            created_at: new Date(),
+        };
+
+        sendMessage(messageData);
+
+        setNewMessage(""); // Clear input field
     };
 
     return (
@@ -84,7 +98,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
                     </div>
 
                     {/* Messages */}
-                    <div className="flex-1 p-4 space-y-4 overflow-y-scroll hide-scrollbar">
+                    <div className="flex-1 p-4 space-y-4 overflow-y-scroll hide-scrollbar" ref={messageListRef}>
                         {loadingMessages ? (
                                 <p>Loading messages...</p>
                             ) : messages.length > 0 ? (
@@ -92,8 +106,9 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
                                     <div
                                         key={index}
                                         className={`flex ${
-                                            msg.sender._id === currentLoggedInUser.id ? 'justify-end' : 'justify-start'
+                                            (msg.sender._id || msg.sender) === currentLoggedInUser.id ? 'justify-end' : 'justify-start'
                                         }`}
+                                        ref={index === messages.length - 1 ? lastMessageRef : null}
                                     >
                                     <div className="bg-blue-100 p-3 rounded-lg max-w-xs">
                                         <p>{msg.content}</p>
