@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const Conversation = require('../models/Conversation');
+const { io } = require('../io');
 
 // Protected route to fetch conversations
 router.get('/', authMiddleware, async (req, res) => {
@@ -41,7 +42,9 @@ router.post('/start', authMiddleware, async (req, res) => {
             conversation = new Conversation({ 
                 sender, 
                 receiver,
-                content: ''
+                content: '',
+                created_at: new Date(),
+                updated_at: new Date(),
             });
 
             // Save the conversation
@@ -49,6 +52,8 @@ router.post('/start', authMiddleware, async (req, res) => {
 
             // Populate sender and receiver details after saving
             conversation = await conversation.populate('sender receiver', 'name');
+            // Emit the new conversation to connected clients
+            io.emit('conversationCreated', conversation);
         }
 
         // Step 3: Send the conversation (existing or new) as the response

@@ -8,7 +8,7 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
     const [newMessage, setNewMessage] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const conversationId = selectedUser?._id;
-    const { messages, currentLoggedInUser, loadingMessages, fetchMessages, sendMessage, } = useConversation();
+    const { messages, currentLoggedInUser, loadingMessages, sendMessage, handleConversationSelect } = useConversation();
     const messageListRef = useRef(null); // Reference to the message list
     const lastMessageRef = useRef(null); // Reference to the last message
     // Scroll to the last message when the conversation is opened
@@ -27,9 +27,9 @@ const ConversationWindow = ({ selectedUser, toggleAbout }) => {
     // Fetch messages when a new conversation is selected
     useEffect(() => {
         if (conversationId) {
-            fetchMessages(conversationId);
+            handleConversationSelect(conversationId);
         }
-    }, [conversationId, fetchMessages]);
+    }, [conversationId]);
 
     const handleSendMessage = () => {
         if (!newMessage.trim()) return;

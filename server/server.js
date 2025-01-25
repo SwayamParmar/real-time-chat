@@ -7,6 +7,7 @@ const socketIo = require('socket.io');
 const userRoutes = require('./routes/user');
 const conversationRoutes = require('./routes/conversations');
 const messageRoutes = require('./routes/message');
+const Conversation = require("./models/Conversation");
 
 dotenv.config(); // Load environment variables
 
@@ -35,29 +36,38 @@ mongoose
 
 // Real-time socket handling
 io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id);
+    // console.log('New client connected:', socket.id);
 
     // Join a room for the logged-in user
     const { userId } = socket.handshake.query;
     if (userId) {
         socket.join(userId); // Join a room with the user's ID
-        console.log(`User ${userId} joined room ${userId}`);
+        // console.log(`User ${userId} joined room ${userId}`);
     }
 
     // Listen for messages from the client
-    socket.on('sendMessage', (data) => {
-        console.log('Message received:', data);
+    socket.on('sendMessage', async (data) => {
+        // console.log('Message received:', data);
 
         // Send the message only to the recipient's room
-        const { receiver } = data; // receiverId in the messageData
-        // Check if the receiver room exists
-        const rooms = io.sockets.adapter.rooms;
-        if (rooms.has(receiver)) {
+        const { conversationId, receiver, content } = data; // receiverId in the messageData
+        const isRoomExist = io.sockets.adapter.rooms.get(receiver)?.size > 0; // Check if the receiver room exists
+        if (isRoomExist) {
             io.to(receiver).emit('receiveMessage', data);
-            console.log(`Message sent to user ${receiver}`);
+            // console.log(`Message sent to user ${receiver}`);
         } else {
             console.log(`Room for receiver ${receiver} does not exist.`);
         }
+
+        // Update conversation
+        const updatedConversation = await Conversation.findByIdAndUpdate(
+            conversationId,
+            { content, updated_at: new Date() },
+            { new: true }
+        ).populate('sender', 'name') // Include sender's name
+        .populate('receiver', 'name'); // Include receiver's name
+
+        io.emit('conversationUpdated', updatedConversation); // Emit event for conversation list update
 
     });
 

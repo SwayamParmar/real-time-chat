@@ -12,6 +12,8 @@ export const ConversationProvider = ({ children }) => {
     const [messages, setMessages] = useState([]);
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [socket, setSocket] = useState(null); // Socket instance
+    const [activeConversationId, setActiveConversationId] = useState(null);
+    // const activeConversationIdRef = useRef(null);
 
     const token = localStorage.getItem('token');
     const currentLoggedInUser = JSON.parse(localStorage.getItem('user'));
@@ -39,7 +41,11 @@ export const ConversationProvider = ({ children }) => {
 
         // Handle real-time incoming messages
         const handleMessage = (message) => {
-            console.log("Real-time message received:", message);
+            // console.log('Active conversation id (ref):', activeConversationIdRef.current);
+            if (message.conversationId !== activeConversationId) { // Check if the message belong to the selected conversation or not
+                // console.log("Message does not belong to the active conversation. Ignored.");
+                return;
+            }
             setMessages((prev) => {
                 const messageExists = prev.some((msg) => msg._id === message._id);
                 if (!messageExists) {
@@ -47,17 +53,68 @@ export const ConversationProvider = ({ children }) => {
                 }
                 return prev; // Prevent duplicate messages
             });
+
+            // Update conversation list
+            setConversations((prev) => {
+                const index = prev.findIndex((conv) => conv._id === message.conversationId);
+                if (index !== -1) {
+                    const updated = { ...prev[index], content: message.content, updated_at: new Date() };
+                    const newList = [...prev];
+                    newList.splice(index, 1);
+                    return [updated, ...newList];
+                }
+                return [
+                    { ...message, created_at: new Date(), updated_at: new Date() },
+                    ...prev,
+                ];
+            });
         };
 
         socketInstance.on("receiveMessage", handleMessage);
 
+        // Real-time conversation update
+        socketInstance.on("conversationUpdated", (updatedConversation) => {
+            setConversations((prev) => {
+                const conversationIndex = prev.findIndex((conv) => conv._id === updatedConversation._id);
+
+                if (conversationIndex !== -1) {
+                    const updatedList = [...prev];
+                    updatedList.splice(conversationIndex, 1); // Remove the old conversation
+                    return [updatedConversation, ...updatedList]; // Add the updated one at the top
+                } else {
+                    return [updatedConversation, ...prev];
+                }
+            });
+        });
+
+        // Real-time new conversation handling
+        socketInstance.on("conversationCreated", (newConversation) => {
+            setConversations((prev) => {
+                const conversationExists = prev.some((conv) => conv._id === newConversation._id);
+
+                if (!conversationExists) {
+                    return [newConversation, ...prev]; // Add the new conversation to the top
+                }
+                return prev; // Prevent duplicates
+            });
+        });
+
         // Cleanup on unmount
         return () => {
             socketInstance.off("receiveMessage", handleMessage); // Remove listener
+            socketInstance.off("conversationUpdated");
+            socketInstance.off("conversationCreated");
             socketInstance.disconnect(); // Disconnect socket
             console.log("Disconnected from Socket.IO server");
         };
-    }, [token]);
+    }, [token, activeConversationId]);
+
+    // Setting the selected conversation
+    const handleConversationSelect = (conversationId) => {
+        setActiveConversationId(conversationId);
+        fetchMessages(conversationId); // Load messages for the selected conversation
+        // activeConversationIdRef.current = conversationId; // Update the ref
+    };
 
     // Fetch all conversations
     const fetchConversations = useCallback(async () => {
@@ -207,6 +264,7 @@ export const ConversationProvider = ({ children }) => {
                 currentLoggedInUser,
                 setMessages,
                 socket,
+                handleConversationSelect,
             }}
         >
             {children}
