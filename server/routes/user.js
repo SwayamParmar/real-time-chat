@@ -11,7 +11,7 @@ router.get('/', authMiddleware, async (req, res) => {
     try {
         // console.log('Current User ID:', req.user.userId); // Log the current user ID
         const currentUserId = req.user.userId;
-        const users = await User.find({ _id: { $ne: currentUserId } }, 'name email'); // Fetch all users except logged-in
+        const users = await User.find({ _id: { $ne: currentUserId } }, 'name email is_online'); // Fetch all users except logged-in
         res.status(200).json({ users });
     } catch (error) {
         console.error('Error fetching users:', error);
@@ -74,6 +74,10 @@ router.post('/login', async (req, res) => {
         if (!isValidPassword) {
             return res.status(400).json({ message: 'Invalid Password' });
         }
+
+        // Update online status on login
+        user.is_online = 1;
+        await user.save();
 
         // Generate JWT token
         const token = jwt.sign(

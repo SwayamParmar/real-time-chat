@@ -28,13 +28,13 @@ const conversationSchema = new mongoose.Schema({
     }],
     
     // Timestamp fields
-    created_at: { type: Date, default: Date.now },
-    updated_at: { type: Date }, // Only populated if the message is edited
+    created_at: { type: Date, default: () => new Date() },
+    updated_at: { type: Date, default: () => new Date() }, // Only populated if the message is edited
 });
 
 conversationSchema.pre('save', function (next) {
     if (this.isModified('content')) {
-        this.updated_at = Date.now();
+        this.updated_at = new Date();
     }
     next();
 });
