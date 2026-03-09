@@ -29,11 +29,16 @@ export const Avatar = ({ text, color, size = 40 }) => (
 // ─── TypingIndicator ──────────────────────────────────────────────────────────
 export const TypingIndicator = ({ contact }) => (
     <div className="flex items-end gap-2 mb-2.5">
-        <Avatar initials={contact.avatar} color={contact.color} size={30} />
+        <Avatar
+            text={contact.name?.slice(0, 2).toUpperCase()}
+            color="#7C6FCD"
+            size={30}
+        />
+
         <div className="bg-surface-raised border border-surface-muted rounded-[18px_18px_18px_4px] px-4 py-3 flex gap-1 items-center">
-            {["animate-typing-dot-0", "animate-typing-dot-1", "animate-typing-dot-2"].map((cls, i) => (
-                <span key={i} className={`w-1.5 h-1.5 rounded-full bg-chat-faint inline-block ${cls}`} />
-            ))}
+            <span className="w-1.5 h-1.5 rounded-full bg-chat-faint animate-typing-bounce-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-chat-faint animate-typing-bounce-1" />
+            <span className="w-1.5 h-1.5 rounded-full bg-chat-faint animate-typing-bounce-2" />
         </div>
     </div>
 );

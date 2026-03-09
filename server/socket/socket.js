@@ -1,6 +1,7 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
 const Message = require("../models/Message");
+const User = require("../models/User");
 const Conversation = require("../models/Conversation");
 
 let io;
@@ -28,8 +29,14 @@ function initSocket(server) {
         }
     });
 
-    io.on("connection", (socket) => {
+    io.on("connection", async (socket) => {
         const userId = socket.user.userId;
+
+        // Mark online
+        await User.findByIdAndUpdate(userId, {
+            is_online: 1,
+            lastSeen: new Date(),
+        });
 
         console.log("✅ Socket connected:", userId);
 
@@ -170,6 +177,12 @@ function initSocket(server) {
         // ❌ DISCONNECT
         socket.on("disconnect", () => {
             console.log("❌ Disconnected:", userId);
+
+            User.findByIdAndUpdate(userId, {
+                is_online: 0,
+                lastSeen: new Date(),
+            }).catch(console.error);
+
             onlineUsers.delete(userId);
             io.emit("onlineUsers", Array.from(onlineUsers.keys()));
         });

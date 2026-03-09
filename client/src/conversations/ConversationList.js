@@ -7,9 +7,8 @@ import Loading from "../components/Loading";
 import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
 
 const ConversationList = () => {
-    const { conversations, fetchMessages, activeConversationId, unreadCounts, typingUsers } = useChatStore();
+    const { onlineUsers, conversations, fetchMessages, activeConversationId, typingUsers } = useChatStore();
     const { user } = useAuthStore();
-    const [search, setSearch] = useState("");
 
     return (
         <div className="w-[360px] min-w-[260px] bg-surface-panel border-r border-r-white/10 flex flex-col h-screen font-sans">
@@ -38,9 +37,11 @@ const ConversationList = () => {
                                         color="#7C6FCD"
                                         size={42}
                                     />
-                                    <span className="absolute bottom-0.5 right-0.5">
-                                        <StatusDot status='online' />
-                                    </span>
+                                    {onlineUsers.includes(otherUser?._id) && (
+                                        <span className="absolute bottom-0.5 right-0.5">
+                                            <StatusDot status='online' />
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center">

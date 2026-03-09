@@ -90,8 +90,18 @@ export const useChatStore = create((set, get) => ({
             }));
         });
 
-        socket.on("onlineUsers", (users) => {
-            set({ onlineUsers: users });
+        socket.on("onlineUsers", (onlineUserIds) => {
+            set((state) => ({
+                onlineUsers: onlineUserIds,
+                // sync is_online status in conversations list in real time
+                conversations: state.conversations.map((conv) => ({
+                    ...conv,
+                    participants: conv.participants.map((p) => ({
+                        ...p,
+                        is_online: onlineUserIds.includes(p._id) ? 1 : 0,
+                    })),
+                })),
+            }));
         });
 
         socket.on("disconnect", () => {

@@ -15,7 +15,7 @@ const generateToken = (userId) => {
 exports.getUsers = async (req, res) => {
     try {
         const currentUserId = req.user.id;
-        const users = await User.find({ _id: { $ne: currentUserId } }, 'name email is_online');
+        const users = await User.find({ _id: { $ne: currentUserId } }, 'name email is_online lastSeen');
         res.status(200).json({ users });
     } catch (error) {
         console.error("Get Users Error:", error);

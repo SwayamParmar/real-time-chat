@@ -10,14 +10,14 @@ exports.getConversations = async (req, res) => {
         const conversations = await Conversation.find({
             participants: userId
         })
-            .populate('participants', 'name email isOnline')
+            .populate('participants', 'name email is_online lastSeen')
             .populate({
                 path: 'lastMessage',
                 populate: { path: 'sender', select: 'name email' }
             })
             .sort({ updatedAt: -1 });
 
-        // ✅ Attach unread count to each conversation
+        // Attach unread count to each conversation
         const conversationsWithUnread = await Promise.all(
             conversations.map(async (conv) => {
                 const unreadCount = await Message.countDocuments({
@@ -61,12 +61,10 @@ exports.startConversation = async (req, res) => {
             conversation = await Conversation.create({
                 participants: [userId, receiverId]
             });
-
-            conversation = await conversation.populate('participants', 'name email');
+            conversation = await conversation.populate('participants', 'name email is_online lastSeen');
         }
 
         res.status(200).json({ conversation });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Failed to start conversation' });

@@ -34,7 +34,7 @@ export default {
         },
         // ── Status Dots ──────────────────────────────────────
         status: {
-          online: "#22C55E",
+          online: "#46A282",
           away: "#F59E0B",
           offline: "#6B7280",
         },

@@ -3,6 +3,7 @@ import StartConversation from "./StartConversation";
 
 const ConversationListHeader = () => {
     const [showModal, setShowModal] = useState(false);
+    const [search, setSearch] = useState("");
 
     return (
         <>

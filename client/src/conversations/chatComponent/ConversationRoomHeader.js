@@ -7,9 +7,11 @@ import {
     FiMoreVertical,
 } from "react-icons/fi";
 import { useChatStore } from "../../store/chatStore";
+import { formatLastSeen } from "../../timeFormat/formatTimestamp";
 
 const ConversationRoomHeader = ({ user }) => {
-    const { typingUsers, activeConversationId } = useChatStore();
+    const { onlineUsers, typingUsers, activeConversationId } = useChatStore();
+    const isOnline = onlineUsers.includes(user?._id);
     const isTyping = typingUsers[activeConversationId];
 
     return (
@@ -21,19 +23,18 @@ const ConversationRoomHeader = ({ user }) => {
                         color="#7C6FCD"
                         size={40}
                     />
-                    <span className="absolute bottom-0.5 right-0.5">
-                        <StatusDot status="offline" />
-                    </span>
                 </div>
 
                 <div>
                     <p className="text-chat-primary font-semibold text-sm">
                         {user?.name}
                     </p>
-                    {isTyping && (
-                        <p className="text-chat-faint font-semibold text-sm">
-                            <span className="text-brand italic">typing...</span>
-                        </p>
+                    {isTyping ? (
+                        <span className="text-brand italic">typing...</span>
+                    ) : isOnline ? (
+                        <span className="text-green-500 text-sm">Online</span>
+                    ) : (
+                        <span className="text-chat-faint text-sm">{formatLastSeen(user?.lastSeen)}</span>
                     )}
                 </div>
             </div>
