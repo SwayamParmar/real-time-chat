@@ -1,6 +1,5 @@
 // src/config.js
-const BASE_URL =
-    process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 const config = {
     API_BASE_URL: BASE_URL, // Base API URL

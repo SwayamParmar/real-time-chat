@@ -17,7 +17,6 @@ const insertSampleConversation = async () => {
             content: 'Hello! This is a test message.', // Message content
             message_type: 'text', // Message type
             status: 0, // Unread
-            created_at: new Date(),
         });
 
         await newConversation.save();

@@ -13,12 +13,10 @@ export const formatTimestampOnList = (timestamp) => {
     if (isYesterday(date)) return 'Yesterday';
 
     // Show formatted date for older messages
-    return format(date, 'dd/MM/yy'); // Or use 'MM/dd/yy' based on locale preference
+    return format(date, 'dd/MM/yy');
 };
 
 export const formatTimestampOnWindow = (timestamp) => {
     const date = new Date(timestamp);
-
-    // Show formatted time (e.g., "10:45 AM")
     return format(date, 'h:mm a'); 
 }

@@ -5,8 +5,12 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { Slide } from 'react-toastify';
 import config from '../config';
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
 
 const Login = () => {
+    const navigate = useNavigate();
+    const loginStore = useAuthStore((state) => state.login);
     const [isLoaded, setIsLoaded] = useState(false);
     const isMobile = useMediaQuery(768);
     const [showPassword, setShowPassword] = useState(false);
@@ -63,7 +67,7 @@ const Login = () => {
         }
 
         if (hasErrors) return;
-        
+
         try {
             const response = await fetch(`${config.API_BASE_URL}/user/login`, {
                 method: 'POST',
@@ -76,13 +80,10 @@ const Login = () => {
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to login');
             } else {
-                // Store token and user info in localStorage
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-
+                loginStore(data);
                 showToast('Logged in successfully', 'success');
                 setTimeout(() => {
-                    window.location.href = '/conversations';
+                    navigate('/');
                 }, 500);
             }
         } catch (error) {
@@ -123,9 +124,8 @@ const Login = () => {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            className={`w-full px-3 py-2 rounded-lg bg-gray-100 border ${
-                                inputErrors.email ? 'border-red-500' : 'border-gray-100'
-                            } focus:outline-none focus:ring-2 focus:ring-blue-400`}
+                            className={`w-full px-3 py-2 rounded-lg bg-gray-100 border ${inputErrors.email ? 'border-red-500' : 'border-gray-100'
+                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
                             placeholder="Enter your email"
                             required
                         />
@@ -140,9 +140,8 @@ const Login = () => {
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className={`w-full px-3 py-2 rounded-lg bg-gray-100 border ${
-                                inputErrors.password ? 'border-red-500' : 'border-gray-100'
-                            } focus:outline-none focus:ring-2 focus:ring-blue-400`}
+                            className={`w-full px-3 py-2 rounded-lg bg-gray-100 border ${inputErrors.password ? 'border-red-500' : 'border-gray-100'
+                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
                             placeholder="Enter your password"
                         />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute top-9 right-4 text-gray-600">

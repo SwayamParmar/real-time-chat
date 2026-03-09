@@ -5,8 +5,12 @@ import { toast } from 'react-toastify';
 import { Slide } from 'react-toastify';
 import useMediaQuery from '../mediaQuery/useMediaQuery';
 import config from '../config';
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
 
 const Signup = () => {
+    const navigate = useNavigate();
+    const loginStore = useAuthStore((state) => state.login);
     const [isLoaded, setIsLoaded] = useState(false);
     const isMobile = useMediaQuery(768);
     const [showPassword, setShowPassword] = useState(false);
@@ -88,19 +92,16 @@ const Signup = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
-    
+
             const data = await response.json();
-    
+
             if (!response.ok) {
                 showToast(data.message || 'Signup failed');
             } else {
-                // Store token and user info in localStorage
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-    
-                showToast('Signup successful', 'success');
+                loginStore(data);
+                showToast('Signup Successfull', 'success');
                 setTimeout(() => {
-                    window.location.href = '/conversations';
+                    navigate('/');
                 }, 500);
             }
         } catch (error) {
@@ -127,9 +128,8 @@ const Signup = () => {
                             name="fullName"
                             value={formData.fullName}
                             onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${
-                                inputErrors.fullName ? 'border-red-500' : 'border-gray-100'
-                            } focus:outline-none focus:ring-2 focus:ring-blue-400`}
+                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.fullName ? 'border-red-500' : 'border-gray-100'
+                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
                             placeholder="Full Name"
                             required
                         />
@@ -142,9 +142,8 @@ const Signup = () => {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${
-                                inputErrors.email ? 'border-red-500' : 'border-gray-100'
-                            } focus:outline-none focus:ring-2 focus:ring-blue-400`}
+                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.email ? 'border-red-500' : 'border-gray-100'
+                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
                             placeholder="Email"
                             required
                         />
@@ -157,9 +156,8 @@ const Signup = () => {
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${
-                                inputErrors.password ? 'border-red-500' : 'border-gray-100'
-                            } focus:outline-none focus:ring-2 focus:ring-blue-400`}
+                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.password ? 'border-red-500' : 'border-gray-100'
+                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
                             placeholder="Password"
                         />
                         <button
@@ -178,9 +176,8 @@ const Signup = () => {
                             name="confirmPassword"
                             value={formData.confirmPassword}
                             onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${
-                                inputErrors.confirmPassword ? 'border-red-500' : 'border-gray-100'
-                            } focus:outline-none focus:ring-2 focus:ring-blue-400`}
+                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.confirmPassword ? 'border-red-500' : 'border-gray-100'
+                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
                             placeholder="Confirm Password"
                         />
                         <button

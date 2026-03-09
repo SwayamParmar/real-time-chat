@@ -3,7 +3,7 @@ import useMediaQuery from '../mediaQuery/useMediaQuery';
 import { NavLink } from 'react-router-dom';
 import { HiOutlineArrowRight } from "react-icons/hi";
 
-const StartChar = () => {
+const StartChat = () => {
     const isMobile = useMediaQuery(800);
 
     return (
@@ -37,4 +37,4 @@ const StartChar = () => {
     );
 }
 
-export default StartChar;
+export default StartChat;

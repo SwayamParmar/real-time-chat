@@ -29,10 +29,9 @@ const Header = () => {
             <div className="text-center relative">
                 <header className="relative top-0 left-0 w-full z-50 bg-white dark:bg-gray-900 flex items-center justify-between p-2 transition-colors duration-300">
                     <div className="w-11/12 mx-auto flex items-center justify-between transition-colors duration-300">
-                        <div className="flex items-center space-x-4 transition-colors duration-300">
-                            <img src="../img/logo.png" alt="TalkStream logo" className='w-12 h-12' />
+                        <div className="duration-300">
                             <NavLink to="/" className="no-underline">
-                                <span className="text-xl text-slate-700 dark:text-white font-bold">TalkStream</span>
+                                <img src="../img/talkStream.png" alt="TalkStream logo" className='w-16 h-16' />
                             </NavLink>
                         </div>
                         <nav className="flex items-center space-x-4 transition-colors duration-300">

@@ -10,7 +10,6 @@ const userSchema = new mongoose.Schema({
     is_online: { type: Number, default: 0 }, // 0 = offline, 1 = online
     lastSeen: { type: Date, default: Date.now }, // Last activity timestamp
     isVerified: { type: Number, default: 0 }, // 0 = not verified, 1 = verified
-    token: { type: String, default: '' }, // JWT token (optional)
 }, { timestamps: true });
 
 // Hash password before saving the user

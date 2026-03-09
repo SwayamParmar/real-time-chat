@@ -8,7 +8,7 @@ const HeroSection = () => {
 
     return (
         <section className='bg-[#F7F9FC] dark:bg-gray-900 transition-colors duration-300'>
-            <div className={`bg-[#F7F9FC] dark:bg-gray-900 ${isMobile ? 'w-full' : 'w-11/12'} py-8 mx-auto px-4 mt-10 sm:py-16 lg:py-16 transition-colors duration-300`}>
+            <div className={`bg-[#F7F9FC] dark:bg-gray-900 ${isMobile ? 'w-full' : 'w-11/12'} py-8 mx-auto px-4 sm:py-16 lg:py-16 transition-colors duration-300`}>
                 <div className={`flex ${isMobile ? 'flex-col gap-6' : 'flex gap-12'} lg:flex-row items-center justify-between lg:space-x-8 transition-colors duration-300`}>
                     <div className="w-full sm:w-1/1 mt-8 lg:mt-0 transition-colors duration-300">
                         <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-[#1F2937] dark:text-white mb-4 transition-colors duration-300">
