@@ -39,6 +39,11 @@ const messageSchema = new mongoose.Schema(
             }
         ],
 
+        seenAt: {
+            type: Date,
+            default: null
+        },
+
         isDeleted: {
             type: Boolean,
             default: false
@@ -47,7 +52,7 @@ const messageSchema = new mongoose.Schema(
         isEdited: {
             type: Boolean,
             default: false
-        }
+        },
     },
     { timestamps: true }
 );

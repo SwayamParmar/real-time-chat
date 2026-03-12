@@ -17,6 +17,7 @@ export const useChatStore = create((set, get) => ({
     socketInitialized: false,
     unreadCounts: {},
     typingUsers: {},
+    editingMessage: null,
 
     // INIT SOCKET
     initSocket: () => {
@@ -31,6 +32,9 @@ export const useChatStore = create((set, get) => ({
         socket.off("onlineUsers");
         socket.off("userTyping");
         socket.off("userStopTyping");
+        socket.off("messageEdited");
+        socket.off("messageDeleted");
+        socket.off("messagesSeen");
 
         socket.on("receiveMessage", (message) => {
             const { activeConversationId } = get();
@@ -90,6 +94,34 @@ export const useChatStore = create((set, get) => ({
             }));
         });
 
+        socket.on("messageEdited", (updatedMessage) => {
+            set((state) => ({
+                messages: state.messages.map((m) =>
+                    m._id === updatedMessage._id ? updatedMessage : m
+                ),
+            }));
+        });
+
+        socket.on("messageDeleted", ({ messageId, conversationId }) => {
+            set((state) => ({
+                // ✅ update messages list
+                messages: state.messages.map((m) =>
+                    m._id === messageId ? { ...m, isDeleted: true } : m
+                ),
+                // ✅ update lastMessage in conversation list
+                conversations: state.conversations.map((conv) => {
+                    if (conv._id !== conversationId) return conv;
+                    const isLastMessage = conv.lastMessage?._id === messageId;
+                    return {
+                        ...conv,
+                        lastMessage: isLastMessage
+                            ? { ...conv.lastMessage, isDeleted: true }
+                            : conv.lastMessage,
+                    };
+                }),
+            }));
+        });
+
         socket.on("onlineUsers", (onlineUserIds) => {
             set((state) => ({
                 onlineUsers: onlineUserIds,
@@ -101,6 +133,21 @@ export const useChatStore = create((set, get) => ({
                         is_online: onlineUserIds.includes(p._id) ? 1 : 0,
                     })),
                 })),
+            }));
+        });
+
+        socket.on("messagesSeen", ({ conversationId, seenAt }) => {
+            // ✅ Update seenBy on all messages in local state
+            set((state) => ({
+                messages: state.messages.map((m) => {
+                    const msgConvId = m.conversationId?._id || m.conversationId;
+                    if (msgConvId?.toString() !== conversationId) return m;
+                    return {
+                        ...m,
+                        seenBy: m.seenBy?.length > 1 ? m.seenBy : [...(m.seenBy || []), "seen"],
+                        seenAt: seenAt,
+                    };
+                }),
             }));
         });
 
@@ -242,39 +289,21 @@ export const useChatStore = create((set, get) => ({
     },
 
     // Add markAsRead action
-    markAsRead: async (conversationId) => {
-        const token = useAuthStore.getState().token;
-        const { currentUser } = useAuthStore.getState();
+    markAsRead: (conversationId) => {
+        const socket = getSocket();
 
-        try {
-            await fetch(`${config.API_BASE_URL}/messages/read/${conversationId}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+        // ✅ Socket handles DB update now — no REST call needed
+        socket?.emit("markAsRead", { conversationId });
 
-            // Clear badge locally immediately (don't wait for refetch)
-            set((state) => ({
-                unreadCounts: { ...state.unreadCounts, [conversationId]: 0 },
-                conversations: state.conversations.map((conv) =>
-                    conv._id === conversationId
-                        ? { ...conv, unreadCount: 0 }
-                        : conv
-                ),
-            }));
-
-            // Emit socket event so other user sees "read" state
-            const socket = getSocket();
-            socket?.emit("markAsRead", {
-                conversationId,
-                userId: useAuthStore.getState().user?.id,
-            });
-
-        } catch (error) {
-            console.error("Mark as read error:", error);
-        }
+        // ✅ Clear badge locally immediately
+        set((state) => ({
+            unreadCounts: { ...state.unreadCounts, [conversationId]: 0 },
+            conversations: state.conversations.map((conv) =>
+                conv._id === conversationId
+                    ? { ...conv, unreadCount: 0 }
+                    : conv
+            ),
+        }));
     },
 
     // SEND MESSAGE (SOCKET)
@@ -299,5 +328,18 @@ export const useChatStore = create((set, get) => ({
     emitStopTyping: (conversationId) => {
         const socket = getSocket();
         socket?.emit("stopTyping", { conversationId });
+    },
+
+    setEditingMessage: (message) => set({ editingMessage: message }),
+    clearEditingMessage: () => set({ editingMessage: null }),
+
+    emitEditMessage: ({ messageId, content }) => {
+        const socket = getSocket();
+        socket?.emit("editMessage", { messageId, content });
+    },
+
+    emitDeleteMessage: (messageId) => {
+        const socket = getSocket();
+        socket?.emit("deleteMessage", { messageId });
     },
 }));

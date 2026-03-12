@@ -7,6 +7,104 @@ import Loading from "../components/Loading";
 import InputBar from "./chatComponent/InputBar";
 import { formatTimestampOnWindow } from "../timeFormat/formatTimestamp";
 import { TypingIndicator } from "./chatUtils";
+import { FiChevronDown, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { BsCheck, BsCheckAll } from "react-icons/bs";
+import { IoBan } from "react-icons/io5";
+
+const MessageBubble = ({ msg, isMe, onEdit, onDelete }) => {
+    const [showDropdown, setShowDropdown] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    const renderTicks = () => {
+        if (!isMe) return null;
+        if (msg.seenBy?.length > 1) {
+            return <BsCheckAll className="inline ml-1" style={{ color: "#90cdf4" }} size={15} />;
+        }
+        return <BsCheck className="inline ml-1 opacity-80" size={15} />;
+    };
+
+    // ✅ Deleted placeholder
+    if (msg.isDeleted) {
+        return (
+            <div className={`flex mb-2 ${isMe ? "justify-end" : "justify-start"}`}>
+                <div className="flex items-center gap-1 px-3.5 py-2.5 text-sm rounded-xl bg-surface-raised 
+                                text-chat-faint italic border border-surface-muted">
+                    <IoBan className="inline" size={18} /> This message was deleted
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        // ✅ outer row — controls left/right alignment
+        <div className={`flex mb-2 group ${isMe ? "justify-end" : "justify-start"}`}>
+            {/* ✅ wrapper — max width lives here, position:relative for dropdown */}
+            <div className="relative max-w-[65%]" ref={dropdownRef}>
+                {/* ✅ Dropdown chevron — only for sender */}
+                {isMe && (
+                    <>
+                        <button
+                            onClick={() => setShowDropdown((p) => !p)}
+                            className="absolute top-0 right-0 z-10
+                                       opacity-0 group-hover:opacity-100 transition-opacity
+                                       bg-brand-dark rounded p-0.5"
+                        >
+                            <FiChevronDown size={15} className="text-white" />
+                        </button>
+
+                        {/* Dropdown menu */}
+                        {showDropdown && (
+                            <div className="absolute right-0 top-6 bg-surface-panel 
+                                            border border-surface-muted rounded-xl 
+                                            shadow-lg py-1 w-32 z-20">
+                                <button
+                                    onClick={() => { onEdit(msg); setShowDropdown(false); }}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs 
+                                               text-chat-secondary hover:bg-surface-raised w-full"
+                                >
+                                    <FiEdit2 size={12} /> Edit
+                                </button>
+                                <button
+                                    onClick={() => { onDelete(msg._id); setShowDropdown(false); }}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs 
+                                               text-red-400 hover:bg-surface-raised w-full"
+                                >
+                                    <FiTrash2 size={12} /> Delete
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* ✅ Bubble — same classes as your original working UI */}
+                <div className={`px-3.5 py-2.5 text-sm rounded-xl ${isMe
+                        ? "bg-brand text-white"
+                        : "bg-surface-raised text-chat-secondary"
+                    }`}>
+                    <p className="break-words">{msg.content}</p>
+                    <span className="flex items-center justify-end gap-0.5 text-[10px] mt-1 opacity-70">
+                        {msg.isEdited && (
+                            <span className="text-[9px] opacity-60 mr-1">edited</span>
+                        )}
+                        {formatTimestampOnWindow(msg.createdAt)}
+                        {renderTicks()}
+                    </span>
+                </div>
+
+            </div>
+        </div>
+    );
+};
 
 const ConversationRoom = ({ conversation }) => {
     const {
@@ -16,37 +114,29 @@ const ConversationRoom = ({ conversation }) => {
         hasMore,
         loadingMessages,
         typingUsers,
-        activeConversationId
+        activeConversationId,
+        setEditingMessage,
+        emitDeleteMessage,
     } = useChatStore();
-    const isTyping = typingUsers[activeConversationId];
-    console.log(isTyping);
 
+    const isTyping = typingUsers[activeConversationId];
     const { user } = useAuthStore();
     const bottomRef = useRef(null);
     const scrollRef = useRef(null);
-
-    // remember last message ID so we only auto-scroll when a NEW bottom message appears
     const prevLastId = useRef(null);
 
     useEffect(() => {
         const el = scrollRef.current;
         if (!el) return;
-
         const lastId = messages.length ? messages[messages.length - 1]._id : null;
-
-        // first time we see messages for this conversation, just jump immediately
         if (prevLastId.current === null) {
-            // set scrollTop to bottom without animation
             el.scrollTop = el.scrollHeight;
         } else if (lastId && lastId !== prevLastId.current) {
-            // a truly new message arrived at bottom
             bottomRef.current?.scrollIntoView({ behavior: "smooth" });
         }
-
         prevLastId.current = lastId;
     }, [messages]);
 
-    // if we end up still at (or very near) the top after a load, try again
     useEffect(() => {
         const el = scrollRef.current;
         if (!el) return;
@@ -55,21 +145,16 @@ const ConversationRoom = ({ conversation }) => {
         }
     }, [messages, hasMore, loadingMessages]);
 
-    // reset tracking when switching conversations so initial load logic runs
     useEffect(() => {
         prevLastId.current = null;
     }, [conversation?._id]);
 
-    // ✅ Infinite scroll — load older messages and restore offset
     const handleScroll = () => {
         const el = scrollRef.current;
         if (!el) return;
-
-        // make the trigger a little forgiving to account for bounce/rounding
         if (el.scrollTop <= 20 && hasMore && !loadingMessages) {
             const previousHeight = el.scrollHeight;
             loadMoreMessages().then(() => {
-                // give React/DOM one frame (loader removed, new messages rendered)
                 requestAnimationFrame(() => {
                     const newHeight = el.scrollHeight;
                     el.scrollTop = newHeight - previousHeight;
@@ -80,7 +165,7 @@ const ConversationRoom = ({ conversation }) => {
 
     if (!conversation) return <NoConversationSelected />;
 
-    const otherUser = conversation.participants.find(p => p._id !== user.id);
+    const otherUser = conversation.participants.find((p) => p._id !== user.id);
 
     return (
         <div className="flex-1 flex flex-col bg-surface-base h-screen min-w-0">
@@ -91,31 +176,18 @@ const ConversationRoom = ({ conversation }) => {
                     onScroll={handleScroll}
                     className="h-full overflow-y-auto px-6 pt-6 pb-4 flex flex-col"
                 >
-                    {/* ✅ Loading spinner at top when fetching older messages */}
-                    {loadingMessages && (
-                        <Loading width={20} height={20} />
-                    )}
+                    {loadingMessages && <Loading width={20} height={20} />}
 
                     {messages.map((msg) => {
                         const isMe = msg.sender._id === user.id;
                         return (
-                            <div
+                            <MessageBubble
                                 key={msg._id}
-                                className={`flex mb-2 ${isMe ? "justify-end" : "justify-start"}`}
-                            >
-                            <div
-                                    className={`max-w-[65%] px-3.5 py-2.5 text-sm rounded-2xl ${
-                                        isMe
-                                            ? "bg-brand text-white"
-                                            : "bg-surface-raised text-chat-secondary"
-                                    }`}
-                                >
-                                    <p>{msg.content}</p>
-                                    <span className="block text-[10px] text-right mt-1 opacity-70">
-                                        {formatTimestampOnWindow(msg.createdAt)}
-                                    </span>
-                                </div>
-                            </div>
+                                msg={msg}
+                                isMe={isMe}
+                                onEdit={(msg) => setEditingMessage(msg)}
+                                onDelete={(msgId) => emitDeleteMessage(msgId)}
+                            />
                         );
                     })}
 
@@ -123,8 +195,8 @@ const ConversationRoom = ({ conversation }) => {
                     <div ref={bottomRef} />
                 </div>
 
-                {/* Top Fade */}
-                <div className="pointer-events-none absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-surface-base to-transparent" />
+                <div className="pointer-events-none absolute top-0 left-0 right-0 h-10 
+                                bg-gradient-to-b from-surface-base to-transparent" />
             </div>
 
             <InputBar

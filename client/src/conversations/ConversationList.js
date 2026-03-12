@@ -5,6 +5,7 @@ import { Avatar, StatusDot } from "./chatUtils";
 import ConversationListHeader from "./chatComponent/ConversationListHeader";
 import Loading from "../components/Loading";
 import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
+import { IoBan } from "react-icons/io5";
 
 const ConversationList = () => {
     const { onlineUsers, conversations, fetchMessages, activeConversationId, typingUsers } = useChatStore();
@@ -57,6 +58,8 @@ const ConversationList = () => {
                                         <span className="text-chat-faint text-xs truncate max-w-[200px]" title={conv.lastMessage?.content}>
                                             {typingUsers[conv._id] ? (
                                                 <span className="text-brand italic">typing...</span>
+                                            ) : conv.lastMessage?.isDeleted ? (
+                                                <span className="italic opacity-50 flex gap-1"><IoBan className="inline" size={15} /> Message deleted</span>
                                             ) : (
                                                 conv.lastMessage?.content
                                             )}

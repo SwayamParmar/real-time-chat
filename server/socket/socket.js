@@ -117,35 +117,9 @@ function initSocket(server) {
             }
         });
 
-        // MARK AS SEEN
-        socket.on("markSeen", async ({ conversationId }) => {
-            try {
-                await Message.updateMany(
-                    {
-                        conversationId,
-                        seenBy: { $ne: userId },
-                    },
-                    {
-                        $push: { seenBy: userId },
-                    }
-                );
-
-                const conversation = await Conversation.findById(conversationId);
-
-                const receiverId = conversation.participants.find(
-                    (id) => id.toString() !== userId
-                );
-
-                io.to(`user:${receiverId}`).emit("messageSeen", {
-                    conversationId,
-                });
-            } catch (err) {
-                console.error(err);
-            }
-        });
-
         // update the other client when messages are marked as read
-        socket.on("markAsRead", async ({ conversationId, userId }) => {
+        socket.on("markAsRead", async ({ conversationId }) => {
+            const userId = socket.user.userId; // override with authenticated userId from token
             try {
                 // auth guard
                 const conversation = await Conversation.findOne({
@@ -153,13 +127,27 @@ function initSocket(server) {
                     participants: userId,
                 });
                 if (!conversation) return;
+                const seenAt = new Date();
 
                 await Message.updateMany(
-                    { conversationId, seenBy: { $ne: userId } },
-                    { $addToSet: { seenBy: userId } }
+                    {
+                        conversationId,
+                        seenBy: { $ne: userId },
+                        sender: { $ne: userId }, // don't mark your own messages
+                    },
+                    {
+                        $addToSet: { seenBy: userId },
+                        $set: { seenAt },
+                    }
                 );
 
-                // Notify the other participant that messages were read
+                // ✅ emit back to sender so their ticks update in real time
+                const senderId = conversation.participants.find(
+                    (id) => id.toString() !== userId
+                );
+
+                // Notify the other participant that messages were read and seen
+                io.to(`user:${senderId}`).emit("messagesSeen", { conversationId, seenAt });
                 socket.to(conversationId).emit("messagesRead", { conversationId, userId });
             } catch (err) {
                 console.error("markAsRead socket error:", err);
@@ -172,6 +160,55 @@ function initSocket(server) {
 
         socket.on("stopTyping", ({ conversationId, userId }) => {
             socket.to(conversationId).emit("userStopTyping", { conversationId, userId });
+        });
+
+        // ✏️ EDIT MESSAGE
+        socket.on("editMessage", async ({ messageId, content }) => {
+            try {
+                const message = await Message.findOne({
+                    _id: messageId,
+                    sender: userId, // ✅ only sender can edit
+                });
+                if (!message) return;
+
+                message.content = content;
+                message.isEdited = true;
+                await message.save();
+
+                const populatedMessage = await message.populate("sender", "name email");
+
+                // ✅ notify both users in the conversation room
+                io.to(`user:${userId}`).emit("messageEdited", populatedMessage);
+                socket.to(message.conversationId.toString()).emit("messageEdited", populatedMessage);
+            } catch (err) {
+                console.error("editMessage error:", err);
+            }
+        });
+
+        // 🗑️ DELETE MESSAGE
+        socket.on("deleteMessage", async ({ messageId }) => {
+            try {
+                const message = await Message.findOne({
+                    _id: messageId,
+                    sender: userId, // ✅ only sender can delete
+                });
+                if (!message) return;
+
+                message.isDeleted = true;
+                await message.save();
+
+                // ✅ notify both users
+                io.to(`user:${userId}`).emit("messageDeleted", {
+                    messageId,
+                    conversationId: message.conversationId.toString(),
+                });
+                socket.to(message.conversationId.toString()).emit("messageDeleted", {
+                    messageId,
+                    conversationId: message.conversationId.toString(),
+                });
+            } catch (err) {
+                console.error("deleteMessage error:", err);
+            }
         });
 
         // ❌ DISCONNECT
