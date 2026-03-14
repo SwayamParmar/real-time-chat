@@ -35,6 +35,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("messageEdited");
         socket.off("messageDeleted");
         socket.off("messagesSeen");
+        socket.off("messagesDelivered");
 
         socket.on("receiveMessage", (message) => {
             const { activeConversationId } = get();
@@ -148,6 +149,26 @@ export const useChatStore = create((set, get) => ({
                         seenAt: seenAt,
                     };
                 }),
+            }));
+        });
+
+        socket.on("messagesDelivered", ({ conversationIds, deliveredAt }) => {
+            const { user } = useAuthStore.getState();
+            set((state) => ({
+                messages: state.messages.map((m) => {
+                    const msgConvId = m.conversationId?._id?.toString() || m.conversationId?.toString();
+                    // ✅ only update messages in active conversation
+                    if (!conversationIds.includes(msgConvId)) return m;
+                    // ✅ only update if not already delivered
+                    if (m.deliveredTo?.length > 0) return m;
+                    return {
+                        ...m,
+                        deliveredTo: [...(m.deliveredTo || []), user.id],
+                        deliveredAt,
+                    };
+                }),
+
+                // ✅ no need to update conversations list for delivery
             }));
         });
 

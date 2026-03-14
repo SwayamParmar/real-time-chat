@@ -53,6 +53,10 @@ const messageSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        deliveredTo: [
+            { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+        ],
+        deliveredAt: { type: Date, default: null }
     },
     { timestamps: true }
 );

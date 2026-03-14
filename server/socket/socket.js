@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const Message = require("../models/Message");
 const User = require("../models/User");
 const Conversation = require("../models/Conversation");
+const { Types } = require('mongoose'); // for ObjectId comparisons
 
 let io;
 let onlineUsers = new Map(); // userId -> socketId
@@ -31,6 +32,7 @@ function initSocket(server) {
 
     io.on("connection", async (socket) => {
         const userId = socket.user.userId;
+        socket.join(`user:${userId}`);
 
         // Mark online
         await User.findByIdAndUpdate(userId, {
@@ -46,6 +48,57 @@ function initSocket(server) {
         // Track online users
         onlineUsers.set(userId, socket.id);
         io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+
+        // Mark all undelivered messages as delivered on connect
+        try {
+            const deliveredAt = new Date();
+
+            // Find all conversations this user is part of
+            const conversations = await Conversation.find({
+                participants: new Types.ObjectId(userId)
+            });
+            const conversationIds = conversations.map(c => c._id);
+            // Find all undelivered messages across all conversations
+            const undeliveredMessages = await Message.find({
+                conversationId: { $in: conversationIds },
+                sender: { $ne: userId }, // not sent by this user
+                deliveredTo: { $ne: userId }, // not yet delivered
+            });
+
+            if (undeliveredMessages.length > 0) {
+                // Bulk update
+                const userObjectId = new Types.ObjectId(userId);
+                await Message.updateMany(
+                    {
+                        conversationId: { $in: conversationIds },
+                        sender: { $ne: userObjectId },
+                        deliveredTo: { $ne: userObjectId },
+                    },
+                    {
+                        $addToSet: { deliveredTo: userObjectId },
+                        $set: { deliveredAt },
+                    }
+                );
+
+                // notify senders
+                const senderIds = [...new Set(
+                    undeliveredMessages.map(m => m.sender.toString())
+                )];
+
+                senderIds.forEach((senderId) => {
+                    const senderConvIds = undeliveredMessages
+                        .filter(m => m.sender.toString() === senderId)
+                        .map(m => m.conversationId.toString());
+
+                    io.to(`user:${senderId}`).emit("messagesDelivered", {
+                        conversationIds: [...new Set(senderConvIds)],
+                        deliveredAt,
+                    });
+                });
+            }
+        } catch (err) {
+            console.error("Delivery on connect error:", err);
+        }
 
         // JOIN CONVERSATION ROOM (with auth guard)
         socket.on("joinConversation", async (conversationId) => {
@@ -67,7 +120,7 @@ function initSocket(server) {
             }
         });
 
-        // ✅ LEAVE CONVERSATION ROOM
+        // LEAVE CONVERSATION ROOM
         socket.on("leaveConversation", (conversationId) => {
             socket.leave(conversationId);
             console.log(`${userId} left room: ${conversationId}`);
@@ -80,9 +133,17 @@ function initSocket(server) {
 
                 const conversation = await Conversation.findOne({
                     _id: conversationId,
-                    participants: userId, // auth guard
+                    participants: userId,
                 });
                 if (!conversation) return;
+
+                const receiverId = conversation.participants.find(
+                    (id) => id.toString() !== userId
+                );
+
+                // Check if receiver is online right now
+                const isReceiverOnline = onlineUsers.has(receiverId.toString());
+                const deliveredAt = isReceiverOnline ? new Date() : null;
 
                 const newMessage = await Message.create({
                     conversationId,
@@ -91,26 +152,29 @@ function initSocket(server) {
                     messageType,
                     file,
                     seenBy: [userId],
+                    deliveredTo: isReceiverOnline ? [receiverId] : [],
+                    deliveredAt,
                 });
 
                 conversation.lastMessage = newMessage._id;
                 await conversation.save();
 
                 const populatedMessage = await newMessage.populate("sender", "name email");
-
-                // Find receiver
-                const receiverId = conversation.participants.find(
-                    (id) => id.toString() !== userId
-                );
-
-                // ensure conversationId stays as a plain string
                 const messageToEmit = {
                     ...populatedMessage.toObject(),
-                    conversationId: conversationId, // plain string, not populated object
+                    conversationId: conversationId,
                 };
 
                 io.to(`user:${receiverId}`).emit("receiveMessage", messageToEmit);
                 io.to(`user:${userId}`).emit("receiveMessage", messageToEmit);
+
+                // Notify sender about delivery if receiver was online
+                if (isReceiverOnline) {
+                    io.to(`user:${userId}`).emit("messagesDelivered", {
+                        conversationIds: [conversationId],
+                        deliveredAt,
+                    });
+                }
 
             } catch (err) {
                 console.error(err);
@@ -141,7 +205,7 @@ function initSocket(server) {
                     }
                 );
 
-                // ✅ emit back to sender so their ticks update in real time
+                // emit back to sender so their ticks update in real time
                 const senderId = conversation.participants.find(
                     (id) => id.toString() !== userId
                 );
@@ -162,22 +226,21 @@ function initSocket(server) {
             socket.to(conversationId).emit("userStopTyping", { conversationId, userId });
         });
 
-        // ✏️ EDIT MESSAGE
+        // EDIT MESSAGE
         socket.on("editMessage", async ({ messageId, content }) => {
             try {
                 const message = await Message.findOne({
                     _id: messageId,
-                    sender: userId, // ✅ only sender can edit
+                    sender: userId, // only sender can edit
                 });
                 if (!message) return;
 
                 message.content = content;
                 message.isEdited = true;
                 await message.save();
-
                 const populatedMessage = await message.populate("sender", "name email");
 
-                // ✅ notify both users in the conversation room
+                // notify both users in the conversation room
                 io.to(`user:${userId}`).emit("messageEdited", populatedMessage);
                 socket.to(message.conversationId.toString()).emit("messageEdited", populatedMessage);
             } catch (err) {
@@ -190,14 +253,14 @@ function initSocket(server) {
             try {
                 const message = await Message.findOne({
                     _id: messageId,
-                    sender: userId, // ✅ only sender can delete
+                    sender: userId, // only sender can delete
                 });
                 if (!message) return;
 
                 message.isDeleted = true;
                 await message.save();
 
-                // ✅ notify both users
+                // notify both users
                 io.to(`user:${userId}`).emit("messageDeleted", {
                     messageId,
                     conversationId: message.conversationId.toString(),
@@ -211,7 +274,7 @@ function initSocket(server) {
             }
         });
 
-        // ❌ DISCONNECT
+        // DISCONNECT
         socket.on("disconnect", () => {
             console.log("❌ Disconnected:", userId);
 
