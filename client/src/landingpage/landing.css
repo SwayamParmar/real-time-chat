@@ -1,0 +1,330 @@
+/* ─────────────────────────────────────────────
+   TalkStream — Landing Page Global Styles
+   All CSS variables, keyframes & utilities
+   that cannot be expressed in Tailwind alone.
+   Import this once in Home.jsx
+───────────────────────────────────────────── */
+
+/* ─── FONTS ─── */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap");
+
+/* ─── CSS VARIABLES ─── */
+:root {
+    --surface-base: #0d0f16;
+    --surface-panel: #111318;
+    --surface-raised: #1a1d28;
+    --surface-border: #1e2130;
+    --surface-muted: #252a40;
+    --chat-primary: #e8eaf0;
+    --chat-secondary: #d0d5e8;
+    --chat-muted: #a0a8c0;
+    --chat-faint: #505870;
+    --chat-ghost: #3c4260;
+    --chat-dim: #404660;
+    --brand: #7c6fcd;
+    --brand-dark: #6057b0;
+    --brand-glow: rgba(124, 111, 205, 0.18);
+    --brand-subtle: rgba(124, 111, 205, 0.35);
+    --status-online: #46a282;
+    --status-away: #f59e0b;
+    --status-offline: #6b7280;
+}
+
+/* ─── BASE ─── */
+html {
+    scroll-behavior: smooth;
+}
+
+.landing-root {
+    background: var(--surface-base);
+    color: var(--chat-primary);
+    font-family: "DM Sans", sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* Noise texture overlay */
+.landing-root::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+}
+
+/* ─── FONT HELPERS ─── */
+.font-syne {
+    font-family: "Syne", sans-serif;
+}
+
+.font-mono {
+    font-family: "DM Mono", monospace;
+}
+
+/* ─── KEYFRAMES ─── */
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(70, 162, 130, 0.4);
+    }
+
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 5px rgba(70, 162, 130, 0);
+    }
+}
+
+@keyframes typing-bounce {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        background: var(--chat-faint);
+    }
+
+    30% {
+        transform: translateY(-4px);
+        background: var(--brand);
+    }
+}
+
+@keyframes float-badge {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes arrow-pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes reveal-in {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes hero-entry {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ─── ANIMATION UTILITIES ─── */
+.anim-pulse-dot {
+    animation: pulse-dot 2s infinite;
+}
+
+.anim-typing-0 {
+    animation: typing-bounce 1s 0s infinite;
+}
+
+.anim-typing-1 {
+    animation: typing-bounce 1s 0.2s infinite;
+}
+
+.anim-typing-2 {
+    animation: typing-bounce 1s 0.4s infinite;
+}
+
+.anim-float {
+    animation: float-badge 3s ease-in-out infinite;
+}
+
+.anim-float-d1 {
+    animation: float-badge 3s ease-in-out 1s infinite;
+}
+
+.anim-float-d2 {
+    animation: float-badge 3s ease-in-out 2s infinite;
+}
+
+.anim-arrow-pulse {
+    animation: arrow-pulse 1.5s infinite;
+}
+
+/* ─── SCROLL REVEAL ─── */
+.reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+        opacity 0.6s ease,
+        transform 0.6s ease;
+}
+
+.reveal.visible {
+    opacity: 1;
+    transform: none;
+}
+
+.reveal-d1.visible {
+    transition-delay: 0.1s;
+}
+
+.reveal-d2.visible {
+    transition-delay: 0.2s;
+}
+
+.reveal-d3.visible {
+    transition-delay: 0.3s;
+}
+
+.reveal-d4.visible {
+    transition-delay: 0.4s;
+}
+
+/* ─── HERO ENTRY ─── */
+.hero-entry {
+    animation: hero-entry 0.6s ease both;
+}
+
+.hero-entry-d0 {
+    animation-delay: 0.05s;
+}
+
+.hero-entry-d1 {
+    animation-delay: 0.15s;
+}
+
+.hero-entry-d2 {
+    animation-delay: 0.25s;
+}
+
+.hero-entry-d3 {
+    animation-delay: 0.35s;
+}
+
+.hero-entry-d4 {
+    animation-delay: 0.45s;
+}
+
+.hero-entry-d5 {
+    animation-delay: 0.55s;
+}
+
+/* ─── HERO GRID LINES ─── */
+.hero-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(124, 111, 205, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124, 111, 205, 0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 50%,
+            black 0%,
+            transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%,
+            black 0%,
+            transparent 100%);
+    pointer-events: none;
+}
+
+/* ─── GRADIENT TEXT ─── */
+.grad-text {
+    background: linear-gradient(135deg, var(--brand) 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ─── STATS STRIP GRADIENT ─── */
+.stats-shine::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(124, 111, 205, 0.04) 50%,
+            transparent);
+}
+
+/* ─── CTA GRID ─── */
+.cta-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(124, 111, 205, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124, 111, 205, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 100%,
+            black 0%,
+            transparent 100%);
+    mask-image: radial-gradient(ellipse 70% 50% at 50% 100%,
+            black 0%,
+            transparent 100%);
+}
+
+/* ─── FEATURE CARD HOVER GLOW ─── */
+.feature-card-glow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--brand-glow), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: inherit;
+}
+
+.feature-card-glow:hover::before {
+    opacity: 1;
+}
+
+/* ─── ARCH DIAGRAM ─── */
+.arch-col-title {
+    font-family: "DM Mono", monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--brand);
+    margin-bottom: 16px;
+}
+
+/* ─── NAVBAR SCROLL BORDER ─── */
+.nav-scrolled {
+    border-bottom-color: rgba(30, 33, 48, 0.9) !important;
+}
+
+/* ─── RESPONSIVE OVERRIDES ─── */
+@media (max-width: 900px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .hide-sm {
+        display: none !important;
+    }
+}

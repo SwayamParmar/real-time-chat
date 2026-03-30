@@ -37,3 +37,24 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Horizontal scrollbar */
+::-webkit-scrollbar {
+  height: 5px;
+}
+
+/* Vertical scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* Thumb */
+::-webkit-scrollbar-thumb {
+  background-color: #252A40; /* your surface.muted */
+  border-radius: 9999px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: transparent;
+}

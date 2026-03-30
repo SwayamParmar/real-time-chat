@@ -1,16 +1,16 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
 const userRoutes = require('./routes/user');
 const conversationRoutes = require('./routes/conversations');
 const messageRoutes = require('./routes/message');
+const uploadRoutes = require('./routes/uploadFile');
 const Conversation = require("./models/Conversation");
 const errorHandler = require('./middleware/errorHandler');
 const { initSocket } = require('./socket/socket');
 
-dotenv.config(); // Load environment variables
 
 const app = express();
 const server = http.createServer(app); // Use HTTP server with Express
@@ -23,6 +23,7 @@ app.use(cors()); // Enable CORS
 app.use('/api/user', userRoutes); // User-related routes (signup, login)
 app.use('/api/conversations', conversationRoutes); // Conversations route (protected)
 app.use('/api/messages', messageRoutes); // message route (protected)
+app.use('/api/upload', uploadRoutes); // file upload route (protected)
 app.use(errorHandler); 
 
 // MongoDB connection

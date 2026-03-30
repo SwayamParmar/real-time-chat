@@ -6,9 +6,11 @@ import ConversationListHeader from "./chatComponent/ConversationListHeader";
 import Loading from "../components/Loading";
 import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
 import { IoBan } from "react-icons/io5";
+import { HiMiniPhoto, HiVideoCamera, HiDocument } from "react-icons/hi2";
 
 const ConversationList = () => {
     const { onlineUsers, conversations, fetchMessages, activeConversationId, typingUsers } = useChatStore();
+    console.log(conversations);
     const { user } = useAuthStore();
 
     return (
@@ -22,6 +24,15 @@ const ConversationList = () => {
                         const otherUser = conv.participants.find(
                             p => p._id !== user.id
                         );
+                        const titleMessage = conv.lastMessage?.messageType === "text"
+                                ? conv.lastMessage?.content
+                                : conv.lastMessage?.messageType === "image"
+                                ? "Sent a photo"
+                                : conv.lastMessage?.messageType === "video"
+                                ? "Sent a video"
+                                : conv.lastMessage?.messageType === "file"
+                                ? conv.lastMessage?.file?.name || "Sent a file"
+                                : conv.lastMessage?.content;
 
                         return (
                             <button
@@ -55,13 +66,34 @@ const ConversationList = () => {
                                     </div>
 
                                     <div className="flex justify-between mt-0.5">
-                                        <span className="text-chat-faint text-xs truncate max-w-[200px]" title={conv.lastMessage?.content}>
+                                        <span className="text-chat-faint text-xs truncate max-w-[200px]" title={titleMessage}>
                                             {typingUsers[conv._id] ? (
                                                 <span className="text-brand italic">typing...</span>
                                             ) : conv.lastMessage?.isDeleted ? (
-                                                <span className="italic opacity-50 flex gap-1"><IoBan className="inline" size={15} /> Message deleted</span>
+                                                <span className="italic opacity-50 flex gap-1">
+                                                    <IoBan className="inline" size={15} /> Message deleted
+                                                </span>
                                             ) : (
-                                                conv.lastMessage?.content
+                                                conv.lastMessage?.messageType === "text" ? (
+                                                    conv.lastMessage?.content
+                                                ) : conv.lastMessage?.messageType === "image" ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <HiMiniPhoto className="w-4 h-4" />
+                                                        Sent a photo
+                                                    </span>
+                                                ) : conv.lastMessage?.messageType === "video" ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <HiVideoCamera className="w-4 h-4" />
+                                                        Sent a video
+                                                    </span>
+                                                ) : conv.lastMessage?.messageType === "file" ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <HiDocument className="w-4 h-4" />
+                                                        {conv.lastMessage?.file?.name || "Sent a file"}
+                                                    </span>
+                                                ) : (
+                                                    conv.lastMessage?.content
+                                                )
                                             )}
                                         </span>
                                         {conv.unreadCount > 0 && (

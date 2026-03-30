@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const Message = require("../models/Message");
 const User = require("../models/User");
 const Conversation = require("../models/Conversation");
+const { deleteFromCloudinary } = require('../config/cloudinary');
 const { Types } = require('mongoose'); // for ObjectId comparisons
 
 let io;
@@ -129,7 +130,7 @@ function initSocket(server) {
         // SEND MESSAGE
         socket.on("sendMessage", async (data) => {
             try {
-                const { conversationId, content, messageType, file } = data;
+                const { conversationId, content, messageType = "text", file = null } = data;
 
                 const conversation = await Conversation.findOne({
                     _id: conversationId,
@@ -148,9 +149,13 @@ function initSocket(server) {
                 const newMessage = await Message.create({
                     conversationId,
                     sender: userId,
-                    content,
-                    messageType,
-                    file,
+                    content: content || "",       // ✅ caption or empty
+                    messageType,                   // ✅ "text" | "image" | "video" | "file"
+                    file: file || {               // ✅ file object from Cloudinary
+                        url: "",
+                        name: "",
+                        size: 0,
+                    },
                     seenBy: [userId],
                     deliveredTo: isReceiverOnline ? [receiverId] : [],
                     deliveredAt,
@@ -256,8 +261,16 @@ function initSocket(server) {
                     sender: userId, // only sender can delete
                 });
                 if (!message) return;
+                // If message has a file, delete from Cloudinary first
+                if (message.file?.url) {
+                    const resourceType =
+                        message.messageType === 'video' ? 'video' :
+                            message.messageType === 'file' ? 'raw' : 'image';
 
+                    await deleteFromCloudinary(message.file.url, resourceType);
+                }
                 message.isDeleted = true;
+                message.file = { url: '', name: '', size: 0 };
                 await message.save();
 
                 // notify both users

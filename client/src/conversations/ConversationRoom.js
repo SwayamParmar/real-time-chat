@@ -7,9 +7,11 @@ import Loading from "../components/Loading";
 import InputBar from "./chatComponent/InputBar";
 import { formatTimestampOnWindow } from "../timeFormat/formatTimestamp";
 import { TypingIndicator } from "./chatUtils";
-import { FiChevronDown, FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiChevronDown, FiEdit2, FiTrash2, FiUploadCloud} from "react-icons/fi";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { IoBan } from "react-icons/io5";
+import FilePreviewModal from "./chatComponent/FilePreviewModal";
+import { FaFileAlt } from "react-icons/fa";
 
 const MessageBubble = ({ msg, isMe, onEdit, onDelete }) => {
     const [showDropdown, setShowDropdown] = useState(false);
@@ -97,7 +99,54 @@ const MessageBubble = ({ msg, isMe, onEdit, onDelete }) => {
                     ? "bg-brand text-white"
                     : "bg-surface-raised text-chat-secondary"
                     }`}>
-                    <p className="break-words">{msg.content}</p>
+                    {/* ✅ Image message */}
+                    {msg.messageType === "image" && msg.file?.url && (
+                        <div className="mb-1">
+                            <img
+                                src={msg.file.url}
+                                alt={msg.file.name || "image"}
+                                className="max-w-full rounded-lg object-cover cursor-pointer rounded-lg max-h-[280px] w-auto"
+                                onClick={() => window.open(msg.file.url, "_blank")}
+                            />
+                        </div>
+                    )}
+
+                    {/* ✅ Video message */}
+                    {msg.messageType === "video" && msg.file?.url && (
+                        <div className="mb-1">
+                            <video
+                                src={msg.file.url}
+                                controls
+                                className="max-w-full rounded-lg max-h-[280px]"
+                            />
+                        </div>
+                    )}
+
+                    {/* ✅ File/document message */}
+                    {msg.messageType === "file" && msg.file?.url && (
+                        <a
+                            href={msg.file.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-3 p-2 rounded-lg
+                            bg-black/10 hover:bg-black/20 transition-colors mb-1"
+                        >
+                            <FaFileAlt size={28} className="text-purple-300 flex-shrink-0" />
+                            <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{msg.file.name}</p>
+                                <p className="text-[10px] opacity-60">
+                                    {msg.file.size
+                                        ? `${(msg.file.size / 1024).toFixed(1)} KB`
+                                        : "Document"}
+                                </p>
+                            </div>
+                        </a>
+                    )}
+
+                    {/* ✅ Caption or text content */}
+                    {msg.content && (
+                        <p className="break-words">{msg.content}</p>
+                    )}
                     <span className="flex items-center justify-end gap-0.5 text-[10px] mt-1 opacity-70">
                         {msg.isEdited && (
                             <span className="text-[9px] opacity-60 mr-1">edited</span>
@@ -130,6 +179,9 @@ const ConversationRoom = ({ conversation }) => {
     const bottomRef = useRef(null);
     const scrollRef = useRef(null);
     const prevLastId = useRef(null);
+    const [previewFiles, setPreviewFiles] = useState(null); // null = closed
+    const [isDragging, setIsDragging] = useState(false);
+    const dragCounter = useRef(0);
 
     useEffect(() => {
         const el = scrollRef.current;
@@ -169,12 +221,70 @@ const ConversationRoom = ({ conversation }) => {
         }
     };
 
-    if (!conversation) return <NoConversationSelected />;
+    // ✅ Drag & Drop handlers
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        dragCounter.current++;
+        if (e.dataTransfer.items?.length > 0) setIsDragging(true);
+    };
 
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        dragCounter.current--;
+        if (dragCounter.current === 0) setIsDragging(false);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault(); // required to allow drop
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        dragCounter.current = 0;
+        setIsDragging(false);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length) setPreviewFiles(files);
+    };
+
+    const handleFileSelect = (file) => {
+        setPreviewFiles([file]);
+    };
+
+    const handleSendFiles = (fileData) => {
+        sendMessage({
+            conversationId: conversation._id,
+            ...fileData,
+        });
+    };
+    if (!conversation) return <NoConversationSelected />;
     const otherUser = conversation.participants.find((p) => p._id !== user.id);
 
     return (
-        <div className="flex-1 flex flex-col bg-surface-base h-screen min-w-0">
+        <div className="relative flex-1 flex flex-col bg-surface-base h-screen min-w-0"
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+        >
+            {/* ✅ File Preview Modal */}
+            {previewFiles && (
+                <FilePreviewModal
+                    files={previewFiles}
+                    onClose={() => setPreviewFiles(null)}
+                    onSend={handleSendFiles}
+                />
+            )}
+
+            {/* ✅ Drag overlay — no bg color, just border + icon */}
+            {isDragging && (
+                <div className="absolute inset-0 z-40 border-2 border-dashed border-brand 
+                    rounded-xl flex flex-col items-center justify-center gap-3
+                    pointer-events-none backdrop-blur-[10px]">
+                    <FiUploadCloud size={48} className="text-brand" />
+                    <p className="text-brand font-semibold text-lg">Drop to send</p>
+                </div>
+            )}
+
             <ConversationRoomHeader user={otherUser} />
             <div className="relative flex-1 overflow-hidden">
                 <div
@@ -209,6 +319,7 @@ const ConversationRoom = ({ conversation }) => {
                 onSend={(text) =>
                     sendMessage({ conversationId: conversation._id, content: text })
                 }
+                onFileSelect={(files) => setPreviewFiles(files)}
             />
         </div>
     );
