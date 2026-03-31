@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { Slide } from 'react-toastify';
-import useMediaQuery from '../mediaQuery/useMediaQuery';
 import config from '../config';
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
@@ -12,9 +11,9 @@ const Signup = () => {
     const navigate = useNavigate();
     const loginStore = useAuthStore((state) => state.login);
     const [isLoaded, setIsLoaded] = useState(false);
-    const isMobile = useMediaQuery(768);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
         fullName: '',
@@ -37,8 +36,7 @@ const Signup = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
-
-        setInputErrors({ ...inputErrors, [name]: false }); // Clear error on change
+        setInputErrors({ ...inputErrors, [name]: false });
     };
 
     const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -60,7 +58,6 @@ const Signup = () => {
             });
         };
 
-        // Validate inputs
         if (!formData.fullName.trim()) {
             showToast('Full Name is required');
             setInputErrors((prev) => ({ ...prev, fullName: true }));
@@ -85,125 +82,201 @@ const Signup = () => {
 
         if (hasErrors) return;
 
-        // Send data to the backend
+        setLoading(true);
         try {
             const response = await fetch(`${config.API_BASE_URL}/user/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
-
             const data = await response.json();
-
             if (!response.ok) {
                 showToast(data.message || 'Signup failed');
             } else {
                 loginStore(data);
                 showToast('Signup Successfull', 'success');
-                setTimeout(() => {
-                    navigate('/');
-                }, 500);
+                setTimeout(() => { navigate('/'); }, 500);
             }
         } catch (error) {
             showToast('Something went wrong, please try again');
             console.error('Signup error:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
+    /* ── Reusable password eye toggle ── */
+    const EyeToggle = ({ show, onToggle }) => (
+        <button
+            type="button"
+            onClick={onToggle}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-chat-faint hover:text-brand transition-colors duration-150"
+        >
+            {show ? <FaEye size={13} /> : <FaEyeSlash size={13} />}
+        </button>
+    );
+
     return (
-        <section className="relative min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 flex items-center justify-center overflow-hidden">
-            {/* Decorative Elements */}
-            <div className="absolute w-72 h-72 bg-blue-100 rounded-full top-10 -left-16 opacity-40 animate-pulse"></div>
-            <div className="absolute w-96 h-96 bg-blue-300 rounded-full bottom-10 -right-20 opacity-30"></div>
+        <section className="min-h-screen bg-surface-base flex flex-col items-center justify-center px-4 py-10">
 
-            <div className={`${isMobile ? 'max-w-md w-11/12' : 'max-w-lg w-full'} bg-white shadow-2xl rounded-lg p-6 z-10`}>
-                <h1 className="text-3xl font-bold text-center text-slate-700 mb-4">Create an Account</h1>
-                <p className="text-center text-gray-600 mb-6">Join us to access amazing features!</p>
+            {/* ── Logo ── */}
+            <div className="flex items-center gap-2.5 mb-8">
+                <div className="w-8 h-8 rounded-[9px] bg-brand flex items-center justify-center text-[15px] shadow-bubble">
+                    💬
+                </div>
+                <span className="text-[19px] font-bold tracking-tight text-chat-primary">
+                    Talk<span className="text-brand">Stream</span>
+                </span>
+            </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name:</label>
+            {/* ── Card ── */}
+            <div className="w-full max-w-sm bg-surface-panel border border-surface-border rounded-2xl p-8 shadow-panel">
+
+                <h1 className="text-xl font-bold text-chat-primary mb-1">Create an account</h1>
+                <p className="text-sm text-chat-faint mb-6">Join TalkStream — free, always.</p>
+
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+                    {/* Full Name */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
+                            Full Name
+                        </label>
                         <input
                             type="text"
                             name="fullName"
                             value={formData.fullName}
                             onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.fullName ? 'border-red-500' : 'border-gray-100'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                            placeholder="Full Name"
-                            required
+                            placeholder="Your full name"
+                            className={`w-full px-4 py-2.5 rounded-xl text-sm bg-surface-raised text-chat-primary
+                                placeholder:text-chat-ghost border outline-none
+                                transition-colors duration-150
+                                focus:border-brand focus:ring-2 focus:ring-brand/20
+                                ${inputErrors.fullName
+                                    ? 'border-red-500 ring-2 ring-red-500/20'
+                                    : 'border-surface-border hover:border-surface-muted'
+                                }`}
                         />
+                        {inputErrors.fullName && (
+                            <span className="text-[11px] text-red-400 font-mono">Full name is required</span>
+                        )}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email:</label>
+                    {/* Email */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
+                            Email
+                        </label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.email ? 'border-red-500' : 'border-gray-100'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                            placeholder="Email"
-                            required
+                            placeholder="you@example.com"
+                            className={`w-full px-4 py-2.5 rounded-xl text-sm bg-surface-raised text-chat-primary
+                                placeholder:text-chat-ghost border outline-none
+                                transition-colors duration-150
+                                focus:border-brand focus:ring-2 focus:ring-brand/20
+                                ${inputErrors.email
+                                    ? 'border-red-500 ring-2 ring-red-500/20'
+                                    : 'border-surface-border hover:border-surface-muted'
+                                }`}
                         />
+                        {inputErrors.email && (
+                            <span className="text-[11px] text-red-400 font-mono">Enter a valid email address</span>
+                        )}
                     </div>
 
-                    <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password:</label>
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.password ? 'border-red-500' : 'border-gray-100'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                            placeholder="Password"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute top-9 right-4 text-gray-600"
-                        >
-                            {showPassword ? <FaEye /> : <FaEyeSlash />}
-                        </button>
+                    {/* Password */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                placeholder="Create a password"
+                                className={`w-full px-4 py-2.5 pr-11 rounded-xl text-sm bg-surface-raised text-chat-primary
+                                    placeholder:text-chat-ghost border outline-none
+                                    transition-colors duration-150
+                                    focus:border-brand focus:ring-2 focus:ring-brand/20
+                                    ${inputErrors.password
+                                        ? 'border-red-500 ring-2 ring-red-500/20'
+                                        : 'border-surface-border hover:border-surface-muted'
+                                    }`}
+                            />
+                            <EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
+                        </div>
+                        {inputErrors.password && (
+                            <span className="text-[11px] text-red-400 font-mono">Password is required</span>
+                        )}
                     </div>
 
-                    <div className="relative">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password:</label>
-                        <input
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            name="confirmPassword"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            className={`w-full px-4 py-2 rounded-lg bg-gray-100 border ${inputErrors.confirmPassword ? 'border-red-500' : 'border-gray-100'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                            placeholder="Confirm Password"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute top-9 right-4 text-gray-600"
-                        >
-                            {showConfirmPassword ? <FaEye /> : <FaEyeSlash />}
-                        </button>
+                    {/* Confirm Password */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
+                            Confirm Password
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showConfirmPassword ? 'text' : 'password'}
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                placeholder="Repeat your password"
+                                className={`w-full px-4 py-2.5 pr-11 rounded-xl text-sm bg-surface-raised text-chat-primary
+                                    placeholder:text-chat-ghost border outline-none
+                                    transition-colors duration-150
+                                    focus:border-brand focus:ring-2 focus:ring-brand/20
+                                    ${inputErrors.confirmPassword
+                                        ? 'border-red-500 ring-2 ring-red-500/20'
+                                        : 'border-surface-border hover:border-surface-muted'
+                                    }`}
+                            />
+                            <EyeToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />
+                        </div>
+                        {inputErrors.confirmPassword && (
+                            <span className="text-[11px] text-red-400 font-mono">
+                                {formData.confirmPassword ? 'Passwords do not match' : 'Please confirm your password'}
+                            </span>
+                        )}
                     </div>
 
+                    {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+                        disabled={loading}
+                        className="w-full py-2.5 rounded-xl text-sm font-semibold text-white
+                            bg-brand hover:bg-brand-dark
+                            disabled:opacity-60 disabled:cursor-not-allowed
+                            transition-colors duration-150
+                            flex items-center justify-center gap-2 mt-1"
                     >
-                        Register
+                        {loading ? (
+                            <>
+                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Creating account...
+                            </>
+                        ) : 'Create Account'}
                     </button>
-                </form>
 
-                <p className="text-center text-slate-700 mt-4">
-                    Already have an account?{' '}
-                    <NavLink to="/login" className="text-blue-500 hover:text-blue-700">
-                        Login
-                    </NavLink>
-                </p>
+                </form>
             </div>
+
+            {/* ── Login link ── */}
+            <p className="mt-5 text-sm text-chat-faint">
+                Already have an account?{' '}
+                <NavLink
+                    to="/login"
+                    className="text-brand hover:text-chat-primary font-semibold no-underline transition-colors duration-150"
+                >
+                    Sign in
+                </NavLink>
+            </p>
+
         </section>
     );
 };

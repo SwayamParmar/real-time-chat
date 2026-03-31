@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import useMediaQuery from '../mediaQuery/useMediaQuery';
 import { NavLink } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -12,8 +11,8 @@ const Login = () => {
     const navigate = useNavigate();
     const loginStore = useAuthStore((state) => state.login);
     const [isLoaded, setIsLoaded] = useState(false);
-    const isMobile = useMediaQuery(768);
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
         email: '',
@@ -59,7 +58,6 @@ const Login = () => {
             setInputErrors((prev) => ({ ...prev, email: true }));
             hasErrors = true;
         }
-
         if (!formData.password) {
             showToast('Password is required');
             setInputErrors((prev) => ({ ...prev, password: true }));
@@ -68,97 +66,149 @@ const Login = () => {
 
         if (hasErrors) return;
 
+        setLoading(true);
         try {
             const response = await fetch(`${config.API_BASE_URL}/user/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
-
             const data = await response.json();
-
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to login');
             } else {
                 loginStore(data);
                 showToast('Logged in successfully', 'success');
-                setTimeout(() => {
-                    navigate('/');
-                }, 500);
+                setTimeout(() => { navigate('/'); }, 500);
             }
         } catch (error) {
             showToast(error.message || 'Something went wrong');
             console.error('Login error:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <section className="relative min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 flex items-center justify-center overflow-hidden px-4">
-            {/* Decorative Bubbles */}
-            <div className={`absolute ${isMobile ? 'w-48 h-48' : 'w-72 h-72'} bg-blue-200 rounded-full top-5 md:top-10 -left-10 md:-left-16 opacity-30 animate-pulse`}></div>
-            <div className={`absolute ${isMobile ? 'w-64 h-64' : 'w-96 h-96'} bg-blue-400 rounded-full bottom-8 -right-10 md:-right-20 opacity-20`}></div>
+        <section className="min-h-screen bg-surface-base flex flex-col items-center justify-center px-4">
 
-            <div className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-lg'} bg-white shadow-2xl rounded-xl p-6 sm:p-8 transform transition-all duration-300 hover:shadow-xl`}>
-                <h1 className={`text-${isMobile ? '2xl' : '3xl'} font-bold text-slate-700 text-center mb-3 fade-in`}>
-                    Welcome Back
-                </h1>
-                <div className="text-center mb-2">
-                    <span className="text-sm font-medium text-gray-600">
-                        New here?
-                    </span>
-                    <NavLink to="/register" className="ml-1 text-sm text-blue-500 hover:text-blue-700 transition-colors">
-                        Register Now
-                    </NavLink>
+            {/* ── Logo ── */}
+            <div className="flex items-center gap-2.5 mb-8">
+                <div className="w-8 h-8 rounded-[9px] bg-brand flex items-center justify-center text-[15px] shadow-bubble">
+                    💬
                 </div>
-                <p className={`text-${isMobile ? 'xs' : 'sm'} text-center text-gray-500 mb-6 font-semibold fade-in`}>
-                    Sign in to continue
-                </p>
+                <span className="text-[19px] font-bold tracking-tight text-chat-primary">
+                    Talk<span className="text-brand">Stream</span>
+                </span>
+            </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                            Email:
+            {/* ── Card ── */}
+            <div className="w-full max-w-sm bg-surface-panel border border-surface-border rounded-2xl p-8 shadow-panel">
+
+                <h1 className="text-xl font-bold text-chat-primary mb-1">Welcome back</h1>
+                <p className="text-sm text-chat-faint mb-6">Sign in to continue to TalkStream</p>
+
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+                    {/* Email */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
+                            Email
                         </label>
                         <input
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            className={`w-full px-3 py-2 rounded-lg bg-gray-100 border ${inputErrors.email ? 'border-red-500' : 'border-gray-100'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                            placeholder="Enter your email"
-                            required
+                            placeholder="you@example.com"
+                            className={`w-full px-4 py-2.5 rounded-xl text-sm bg-surface-raised text-chat-primary
+                                placeholder:text-chat-ghost border outline-none
+                                transition-colors duration-150
+                                focus:border-brand focus:ring-2 focus:ring-brand/20
+                                ${inputErrors.email
+                                    ? 'border-red-500 ring-2 ring-red-500/20'
+                                    : 'border-surface-border hover:border-surface-muted'
+                                }`}
                         />
+                        {inputErrors.email && (
+                            <span className="text-[11px] text-red-400 font-mono">Enter a valid email address</span>
+                        )}
                     </div>
 
-                    <div className="relative">
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                            Password:
-                        </label>
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            className={`w-full px-3 py-2 rounded-lg bg-gray-100 border ${inputErrors.password ? 'border-red-500' : 'border-gray-100'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                            placeholder="Enter your password"
-                        />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute top-9 right-4 text-gray-600">
-                            {showPassword ? <FaEye /> : <FaEyeSlash />}
-                        </button>
+                    {/* Password */}
+                    <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
+                                Password
+                            </label>
+                            <NavLink
+                                to="#"
+                                className="text-[12px] text-brand hover:text-chat-primary font-medium no-underline transition-colors duration-150"
+                            >
+                                Forgot password?
+                            </NavLink>
+                        </div>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                placeholder="Enter your password"
+                                className={`w-full px-4 py-2.5 pr-11 rounded-xl text-sm bg-surface-raised text-chat-primary
+                                    placeholder:text-chat-ghost border outline-none
+                                    transition-colors duration-150
+                                    focus:border-brand focus:ring-2 focus:ring-brand/20
+                                    ${inputErrors.password
+                                        ? 'border-red-500 ring-2 ring-red-500/20'
+                                        : 'border-surface-border hover:border-surface-muted'
+                                    }`}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-chat-faint hover:text-brand transition-colors duration-150"
+                            >
+                                {showPassword ? <FaEye size={13} /> : <FaEyeSlash size={13} />}
+                            </button>
+                        </div>
+                        {inputErrors.password && (
+                            <span className="text-[11px] text-red-400 font-mono">Password is required</span>
+                        )}
                     </div>
 
-                    <div className="flex justify-between items-center">
-                        <NavLink to="#" className={`text-${isMobile ? 'xs' : 'sm'} text-blue-500 hover:text-blue-700 transition-colors font-medium`}>
-                            Forgot Password?
-                        </NavLink>
-                        <button type="submit" className="px-4 py-2 bg-[#4169E1] text-white rounded-lg hover:bg-[#527bf4] transition duration-300">
-                            Login
-                        </button>
-                    </div>
+                    {/* Submit */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-2.5 rounded-xl text-sm font-semibold text-white
+                            bg-brand hover:bg-brand-dark
+                            disabled:opacity-60 disabled:cursor-not-allowed
+                            transition-colors duration-150
+                            flex items-center justify-center gap-2 mt-1"
+                    >
+                        {loading ? (
+                            <>
+                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Signing in...
+                            </>
+                        ) : 'Sign In'}
+                    </button>
+
                 </form>
             </div>
+
+            {/* ── Register link ── */}
+            <p className="mt-5 text-sm text-chat-faint">
+                Don't have an account?{' '}
+                <NavLink
+                    to="/register"
+                    className="text-brand hover:text-chat-primary font-semibold no-underline transition-colors duration-150"
+                >
+                    Create one free
+                </NavLink>
+            </p>
+
         </section>
     );
 };
