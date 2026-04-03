@@ -153,7 +153,7 @@ const FilePreviewModal = ({ files, onClose, onSend }) => {
                 >
                     <FiX size={20} />
                 </button>
-                <span className="text-chat-secondary text-sm font-medium truncate max-w-[60%]">
+                <span className="text-chat-secondary text-sm font-medium truncate max-w-[60%] mx-auto">
                     {currentFile?.name}
                 </span>
             </div>

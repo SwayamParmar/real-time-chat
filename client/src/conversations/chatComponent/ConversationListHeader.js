@@ -15,7 +15,7 @@ const ConversationListHeader = () => {
                     <button
                         onClick={() => setShowModal(true)}
                         title="New conversation"
-                        className="w-8 h-8 bg-surface-border rounded-lg flex items-center justify-center text-brand text-lg hover:bg-surface-muted transition-colors duration-200"
+                        className="w-8 h-8 bg-surface-border rounded-lg flex items-center justify-center text-brand text-2xl hover:bg-surface-muted transition-colors duration-200"
                     >
                         +
                     </button>

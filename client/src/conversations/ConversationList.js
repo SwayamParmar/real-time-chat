@@ -9,7 +9,7 @@ import { IoBan } from "react-icons/io5";
 import { HiMiniPhoto, HiVideoCamera, HiDocument } from "react-icons/hi2";
 
 const ConversationList = () => {
-    const { onlineUsers, conversations, fetchMessages, activeConversationId, typingUsers } = useChatStore();
+    const { onlineUsers, conversations, fetchMessages, activeConversationId, typingUsers, loadingConversations } = useChatStore();
     console.log(conversations);
     const { user } = useAuthStore();
 
@@ -17,22 +17,28 @@ const ConversationList = () => {
         <div className="w-[360px] min-w-[260px] bg-surface-panel border-r border-r-white/10 flex flex-col h-screen font-sans">
             <ConversationListHeader />
             <div className="flex-1 overflow-y-auto py-2">
-                {conversations.length === 0 ? (
-                    <Loading width={40} height={40} />
+                {loadingConversations ? (
+                    <div className="flex items-center justify-center h-full">
+                        <Loading width={40} height={40} />
+                    </div>
+                ) : conversations.length === 0 ? (
+                    <div className="text-chat-faint text-sm text-center mt-10">
+                        No conversations yet
+                    </div>
                 ) : (
                     conversations.map((conv) => {
                         const otherUser = conv.participants.find(
                             p => p._id !== user.id
                         );
                         const titleMessage = conv.lastMessage?.messageType === "text"
-                                ? conv.lastMessage?.content
-                                : conv.lastMessage?.messageType === "image"
+                            ? conv.lastMessage?.content
+                            : conv.lastMessage?.messageType === "image"
                                 ? "Sent a photo"
                                 : conv.lastMessage?.messageType === "video"
-                                ? "Sent a video"
-                                : conv.lastMessage?.messageType === "file"
-                                ? conv.lastMessage?.file?.name || "Sent a file"
-                                : conv.lastMessage?.content;
+                                    ? "Sent a video"
+                                    : conv.lastMessage?.messageType === "file"
+                                        ? conv.lastMessage?.file?.name || "Sent a file"
+                                        : conv.lastMessage?.content;
 
                         return (
                             <button
