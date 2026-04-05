@@ -130,7 +130,7 @@ function initSocket(server) {
         // SEND MESSAGE
         socket.on("sendMessage", async (data) => {
             try {
-                const { conversationId, content, messageType = "text", file = null } = data;
+                const { conversationId, content, messageType = "text", file = null, tempId } = data;
 
                 const conversation = await Conversation.findOne({
                     _id: conversationId,
@@ -149,9 +149,9 @@ function initSocket(server) {
                 const newMessage = await Message.create({
                     conversationId,
                     sender: userId,
-                    content: content || "",       // ✅ caption or empty
-                    messageType,                   // ✅ "text" | "image" | "video" | "file"
-                    file: file || {               // ✅ file object from Cloudinary
+                    content: content || "",
+                    messageType,
+                    file: file || {
                         url: "",
                         name: "",
                         size: 0,
@@ -165,13 +165,18 @@ function initSocket(server) {
                 await conversation.save();
 
                 const populatedMessage = await newMessage.populate("sender", "name email");
-                const messageToEmit = {
+                const SenderMessageToEmit = {
+                    ...populatedMessage.toObject(),
+                    conversationId: conversationId,
+                    tempId, // include tempId for client-side reconciliation
+                };
+                const ReceiverMessageToEmit = {
                     ...populatedMessage.toObject(),
                     conversationId: conversationId,
                 };
 
-                io.to(`user:${receiverId}`).emit("receiveMessage", messageToEmit);
-                io.to(`user:${userId}`).emit("receiveMessage", messageToEmit);
+                io.to(`user:${receiverId}`).emit("receiveMessage", ReceiverMessageToEmit);
+                io.to(`user:${userId}`).emit("receiveMessage", SenderMessageToEmit);
 
                 // Notify sender about delivery if receiver was online
                 if (isReceiverOnline) {
@@ -180,7 +185,6 @@ function initSocket(server) {
                         deliveredAt,
                     });
                 }
-
             } catch (err) {
                 console.error(err);
             }

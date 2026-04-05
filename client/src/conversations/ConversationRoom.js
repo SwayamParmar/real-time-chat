@@ -7,7 +7,7 @@ import Loading from "../components/Loading";
 import InputBar from "./chatComponent/InputBar";
 import { formatTimestampOnWindow } from "../timeFormat/formatTimestamp";
 import { TypingIndicator } from "./chatUtils";
-import { FiChevronDown, FiEdit2, FiTrash2, FiUploadCloud} from "react-icons/fi";
+import { FiChevronDown, FiEdit2, FiTrash2, FiUploadCloud } from "react-icons/fi";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { IoBan } from "react-icons/io5";
 import FilePreviewModal from "./chatComponent/FilePreviewModal";
@@ -105,9 +105,23 @@ const MessageBubble = ({ msg, isMe, onEdit, onDelete }) => {
                             <img
                                 src={msg.file.url}
                                 alt={msg.file.name || "image"}
-                                className="max-w-full rounded-lg object-cover cursor-pointer rounded-lg max-h-[280px] w-auto"
-                                onClick={() => window.open(msg.file.url, "_blank")}
+                                className={`max-w-full rounded-lg object-cover max-h-[280px] w-auto ${msg.uploading ? "opacity-50 blur-[1px]" : "cursor-pointer"}`}
+                                onClick={() => !msg.uploading && window.open(msg.file.url, "_blank")}
                             />
+                            {/* ✅ Spinner overlay while uploading */}
+                            {msg.uploading && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-8 h-8 border-2 border-white border-t-transparent 
+                                rounded-full animate-spin" />
+                                </div>
+                            )}
+                            {/* ✅ Failed state */}
+                            {msg.uploadFailed && (
+                                <div className="absolute inset-0 flex items-center justify-center
+                            bg-black/50 rounded-lg">
+                                    <span className="text-white text-xs font-medium">Retry</span>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -124,23 +138,29 @@ const MessageBubble = ({ msg, isMe, onEdit, onDelete }) => {
 
                     {/* ✅ File/document message */}
                     {msg.messageType === "file" && msg.file?.url && (
-                        <a
-                            href={msg.file.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-3 p-2 rounded-lg
-                            bg-black/10 hover:bg-black/20 transition-colors mb-1"
+                        <div className={`flex items-center gap-3 p-2 rounded-lg mb-1 ${msg.uploading
+                            ? "bg-black/10"
+                            : "bg-black/10 hover:bg-black/20 cursor-pointer"}`}
+                            onClick={() => !msg.uploading && window.open(msg.file?.url, "_blank")}
                         >
                             <FaFileAlt size={28} className="text-purple-300 flex-shrink-0" />
-                            <div className="min-w-0">
-                                <p className="text-xs font-medium truncate">{msg.file.name}</p>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs font-medium truncate">{msg.file?.name}</p>
                                 <p className="text-[10px] opacity-60">
-                                    {msg.file.size
-                                        ? `${(msg.file.size / 1024).toFixed(1)} KB`
-                                        : "Document"}
+                                    {msg.uploading ? (
+                                        <span className="flex items-center gap-1">
+                                            <span className="w-3 h-3 border border-white border-t-transparent 
+                                         rounded-full animate-spin inline-block" />
+                                            Uploading...
+                                        </span>
+                                    ) : msg.uploadFailed ? (
+                                        <span className="text-red-400">Upload failed ⚠️</span>
+                                    ) : (
+                                        `${(msg.file?.size / 1024).toFixed(1)} KB`
+                                    )}
                                 </p>
                             </div>
-                        </a>
+                        </div>
                     )}
 
                     {/* ✅ Caption or text content */}
@@ -172,6 +192,7 @@ const ConversationRoom = ({ conversation }) => {
         activeConversationId,
         setEditingMessage,
         emitDeleteMessage,
+        uploadAndSend,
     } = useChatStore();
 
     const isTyping = typingUsers[activeConversationId];
@@ -250,10 +271,12 @@ const ConversationRoom = ({ conversation }) => {
         setPreviewFiles([file]);
     };
 
-    const handleSendFiles = (fileData) => {
-        sendMessage({
+    const handleSendFiles = ({ files, caption }) => {
+        // ✅ Use uploadAndSend from store — non blocking
+        uploadAndSend({
+            files,
+            caption,
             conversationId: conversation._id,
-            ...fileData,
         });
     };
     if (!conversation) return <NoConversationSelected />;

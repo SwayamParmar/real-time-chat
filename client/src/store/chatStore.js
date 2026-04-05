@@ -18,6 +18,7 @@ export const useChatStore = create((set, get) => ({
     unreadCounts: {},
     typingUsers: {},
     editingMessage: null,
+    pendingUploads: {}, // { tempId: { file, progress, conversationId, caption } }
 
     // INIT SOCKET
     initSocket: () => {
@@ -41,28 +42,36 @@ export const useChatStore = create((set, get) => ({
             const { activeConversationId } = get();
 
             const msgConvId = message.conversationId?._id?.toString() || message.conversationId?.toString();
-            if (msgConvId === activeConversationId) {
-                set((state) => {
-                    const exists = state.messages.find(m => m._id === message._id);
-                    if (exists) return state;
-                    return { messages: [...state.messages, message] };
+            if (message.tempId) {
+                get().replacePendingMessage(message.tempId, {
+                    ...message,
+                    isTemp: false,
+                    uploading: false,
                 });
-
-                // Auto-read since this conversation is open
-                get().markAsRead(msgConvId);
             } else {
-                // Increment unread badge for background conversation
-                set((state) => ({
-                    unreadCounts: {
-                        ...state.unreadCounts,
-                        [msgConvId]: (state.unreadCounts[msgConvId] || 0) + 1,
-                    },
-                    conversations: state.conversations.map((conv) =>
-                        conv._id === msgConvId
-                            ? { ...conv, unreadCount: (conv.unreadCount || 0) + 1 }
-                            : conv
-                    ),
-                }));
+                if (msgConvId === activeConversationId) {
+                    set((state) => {
+                        const exists = state.messages.find(m => m._id === message._id);
+                        if (exists) return state;
+                        return { messages: [...state.messages, message] };
+                    });
+
+                    // Auto-read since this conversation is open
+                    get().markAsRead(msgConvId);
+                } else {
+                    // Increment unread badge for background conversation
+                    set((state) => ({
+                        unreadCounts: {
+                            ...state.unreadCounts,
+                            [msgConvId]: (state.unreadCounts[msgConvId] || 0) + 1,
+                        },
+                        conversations: state.conversations.map((conv) =>
+                            conv._id === msgConvId
+                                ? { ...conv, unreadCount: (conv.unreadCount || 0) + 1 }
+                                : conv
+                        ),
+                    }));
+                }
             }
 
             set((state) => {
@@ -328,7 +337,7 @@ export const useChatStore = create((set, get) => ({
     },
 
     // SEND MESSAGE (SOCKET)
-    sendMessage: ({ conversationId, content, messageType = "text", file = null }) => {
+    sendMessage: ({ conversationId, content, messageType = "text", file = null, tempId = null }) => {
         const socket = getSocket();
         if (!socket) return;
         if (!content?.trim() && !file) return;
@@ -337,6 +346,7 @@ export const useChatStore = create((set, get) => ({
             content,
             messageType,
             file,
+            tempId, // ✅ now backend receives it and echoes it back
         });
     },
 
@@ -362,5 +372,104 @@ export const useChatStore = create((set, get) => ({
     emitDeleteMessage: (messageId) => {
         const socket = getSocket();
         socket?.emit("deleteMessage", { messageId });
+    },
+
+    // ✅ Add these actions
+    addPendingMessage: (tempMessage) => {
+        set((state) => ({
+            messages: [...state.messages, tempMessage],
+            pendingUploads: {
+                ...state.pendingUploads,
+                [tempMessage._id]: tempMessage,
+            },
+        }));
+    },
+
+    replacePendingMessage: (tempId, realMessage) => {
+        set((state) => ({
+            messages: state.messages.map((m) =>
+                m._id === tempId ? realMessage : m
+            ),
+            pendingUploads: Object.fromEntries(
+                Object.entries(state.pendingUploads).filter(([k]) => k !== tempId)
+            ),
+        }));
+    },
+
+    failPendingMessage: (tempId) => {
+        set((state) => ({
+            messages: state.messages.map((m) =>
+                m._id === tempId ? { ...m, uploadFailed: true, uploading: false } : m
+            ),
+            pendingUploads: Object.fromEntries(
+                Object.entries(state.pendingUploads).filter(([k]) => k !== tempId)
+            ),
+        }));
+    },
+
+    // ✅ Main upload action
+    uploadAndSend: async ({ files, caption, conversationId }) => {
+        const token = useAuthStore.getState().token;
+        const user = useAuthStore.getState().user;
+
+        // ✅ Create one temp message per file
+        const tempMessages = files.map((file, i) => ({
+            _id: `temp_${Date.now()}_${i}`,
+            conversationId,
+            sender: { _id: user.id, name: user.name },
+            content: i === 0 ? caption : "",
+            messageType: file.type?.startsWith("video/") ? "video"
+                : file.type?.startsWith("image/") ? "image" : "file",
+            file: {
+                url: file instanceof Blob ? URL.createObjectURL(file) : "",
+                name: file.name,
+                size: file.size,
+            },
+            uploading: true,       // ✅ show spinner
+            uploadFailed: false,
+            seenBy: [user.id],
+            deliveredTo: [],
+            createdAt: new Date().toISOString(),
+            isTemp: true,
+        }));
+
+        // ✅ Add all temp messages to chat immediately
+        tempMessages.forEach((msg) => get().addPendingMessage(msg));
+
+        // ✅ Upload each file independently in parallel
+        tempMessages.forEach(async (tempMsg, i) => {
+            const file = files[i];
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const res = await fetch(`${config.API_BASE_URL}/upload`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData,
+                });
+
+                if (!res.ok) throw new Error("Upload failed");
+
+                const fileData = await res.json();
+
+                // ✅ Send via socket after upload
+                get().sendMessage({
+                    conversationId,
+                    content: tempMsg.content,
+                    messageType: fileData.type === "raw" ? "file" : fileData.type,
+                    file: {
+                        url: fileData.url,
+                        name: fileData.name,
+                        size: fileData.size,
+                    },
+                    tempId: tempMsg._id, // ✅ pass tempId so we can replace it
+                });
+
+            } catch (err) {
+                console.error("Upload failed for:", file.name, err);
+                get().failPendingMessage(tempMsg._id);
+            }
+        });
     },
 }));

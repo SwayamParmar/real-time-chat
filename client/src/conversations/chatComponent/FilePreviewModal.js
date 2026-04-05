@@ -96,35 +96,16 @@ const FilePreviewModal = ({ files, onClose, onSend }) => {
     };
 
     const handleSend = async () => {
-        setUploading(true);
-        try {
-            const uploaded = await Promise.all(
-                allFiles.map(async (file) => {
-                    const formData = new FormData();
-                    formData.append("file", file);
-                    const res = await fetch(`${config.API_BASE_URL}/upload`, {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${token}` },
-                        body: formData,
-                    });
-                    return await res.json();
-                })
-            );
+        if (allFiles.length === 0) return;
 
-            uploaded.forEach((fileData, i) => {
-                onSend({
-                    content: i === 0 ? caption : "",
-                    messageType: fileData.type === "raw" ? "file" : fileData.type,
-                    file: { url: fileData.url, name: fileData.name, size: fileData.size },
-                });
-            });
+        // ✅ Close modal INSTANTLY
+        onClose();
 
-            onClose();
-        } catch (err) {
-            console.error("Upload failed:", err);
-        } finally {
-            setUploading(false);
-        }
+        // ✅ Trigger background upload
+        onSend({
+            files: allFiles,
+            caption,
+        });
     };
 
     return (

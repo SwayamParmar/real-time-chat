@@ -10,7 +10,6 @@ import { HiMiniPhoto, HiVideoCamera, HiDocument } from "react-icons/hi2";
 
 const ConversationList = () => {
     const { onlineUsers, conversations, fetchMessages, activeConversationId, typingUsers, loadingConversations } = useChatStore();
-    console.log(conversations);
     const { user } = useAuthStore();
 
     return (
