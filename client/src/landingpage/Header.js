@@ -71,7 +71,7 @@ const Header = () => {
                     {/* GitHub */}
                     <li>
                         <a
-                            href="https://github.com"
+                            href="https://github.com/SwayamParmar/real-time-chat"
                             target="_blank"
                             rel="noreferrer"
                             className="text-[14px] font-medium px-[14px] py-[6px] rounded-lg transition-all duration-200 no-underline"

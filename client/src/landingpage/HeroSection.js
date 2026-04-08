@@ -209,7 +209,7 @@ const HeroSection = () => {
                     {/* CTA Buttons */}
                     <div className="flex gap-3 flex-wrap hero-entry hero-entry-d4">
                         <BtnPrimary href="#">▶ Live Demo</BtnPrimary>
-                        <BtnSecondary href="https://github.com" target="_blank">⌥ View Code</BtnSecondary>
+                        <BtnSecondary href="https://github.com/SwayamParmar/real-time-chat" target="_blank">⌥ View Code</BtnSecondary>
                     </div>
                 </div>
 

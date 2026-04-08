@@ -64,7 +64,7 @@ const CTASection = () => {
                         ▶ Open Live Demo
                     </a>
                     <a
-                        href="https://github.com"
+                        href="https://github.com/SwayamParmar/real-time-chat"
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-2 font-medium text-[14.5px] px-6 py-3 rounded-[10px] no-underline transition-all duration-200"
