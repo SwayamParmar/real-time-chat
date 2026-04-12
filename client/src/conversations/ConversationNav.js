@@ -1,3 +1,5 @@
+import TalkStreamLogo from "../components/TalkStreamLogo";
+
 const NAV_ITEMS = [
     { key: "chats", icon: ChatIcon, label: "Chats" },
     { key: "contacts", icon: ContactIcon, label: "Contacts" },
@@ -10,14 +12,7 @@ const ConversationNav = ({ activeTab = "chats", onTabChange }) => (
 
         {/* ── Logo ────────────────────────────────────────────────────────────── */}
         <div className="mb-6">
-            <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,#7C6FCD,#6057B0)" }}
-            >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                    <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" />
-                </svg>
-            </div>
+            <TalkStreamLogo variant="logo" />
         </div>
 
         {/* ── Nav Icons ───────────────────────────────────────────────────────── */}

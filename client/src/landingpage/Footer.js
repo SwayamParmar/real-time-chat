@@ -33,11 +33,11 @@ const Footer = () => (
         <div className="max-w-[1200px] mx-auto flex items-center justify-between flex-wrap gap-5 pb-10">
             {/* Left */}
             <div>
-                <div className="font-syne font-bold text-[17px]" style={{ color: 'var(--chat-primary)' }}>
+                <div className="font-syne font-bold text-[18px]" style={{ color: 'var(--chat-primary)' }}>
                     Talk<span style={{ color: 'var(--brand)' }}>Stream</span>
                 </div>
                 <div className="font-mono text-[12px] mt-[6px]" style={{ color: 'var(--chat-faint)' }}>
-          // real-time · full-stack · production-grade
+                    real-time · full-stack · production-grade
                 </div>
             </div>
 

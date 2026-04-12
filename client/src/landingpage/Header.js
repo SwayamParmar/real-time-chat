@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import TalkStreamLogo from '../components/TalkStreamLogo';
 
 const Header = () => {
     const navRef = useRef(null);
@@ -25,20 +26,7 @@ const Header = () => {
                 ${scrolled ? 'border-[rgba(30,33,48,0.9)]' : 'border-[rgba(30,33,48,0.6)]'}`}
         >
             <div className="max-w-[1200px] mx-auto w-full flex items-center justify-between">
-                <a href="/" className="flex items-center gap-[10px] no-underline">
-                    {/* <div
-                        className="w-8 h-8 rounded-[9px] flex items-center justify-center text-[15px] flex-shrink-0"
-                        style={{ background: 'var(--brand)', boxShadow: '0 0 20px var(--brand-glow)' }}
-                    >
-                        💬
-                    </div> */}
-                    <span
-                        className="font-syne font-bold text-[18px] tracking-[-0.02em]"
-                        style={{ color: 'var(--chat-primary)' }}
-                    >
-                        Talk<span style={{ color: 'var(--brand)' }}>Stream</span>
-                    </span>
-                </a>
+                <TalkStreamLogo variant='text' />
 
                 {/* Nav Links */}
                 <ul className="flex items-center gap-[6px] list-none hide-sm">
