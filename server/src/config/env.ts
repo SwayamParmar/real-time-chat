@@ -6,9 +6,9 @@ const envSchema = z.object({
     MONGO_URI: z.string().min(1, "MONGO_URI is required"),
     JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
 
-    CLIENT_URL: z.string().url(),
+    CLIENT_URL: z.url(),
 
-    API_BASE_URL: z.string().url().default("http://localhost:5000/api"),
+    API_BASE_URL: z.url().default("http://localhost:5000/api"),
 
     CLOUDINARY_CLOUD_NAME: z.string().min(1),
     CLOUDINARY_API_KEY: z.string().min(1),
