@@ -1,7 +1,7 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, type Document, type Model } from "mongoose";
 import bcrypt from "bcryptjs";
 
-export interface IUser extends Document {
+export interface User extends Document {
     name: string;
     email: string;
     password: string;
@@ -15,7 +15,7 @@ export interface IUser extends Document {
     isValidPassword(password: string): Promise<boolean>;
 }
 
-const userSchema = new Schema<IUser>(
+const userSchema = new Schema<User>(
     {
         name: { type: String, required: true, trim: true },
         email: { type: String, unique: true, required: true, lowercase: true },
@@ -39,12 +39,12 @@ userSchema.pre("save", async function (next) {
 
 // Method to validate password
 userSchema.methods.isValidPassword = async function (
-    this: IUser,
+    this: User,
     password: string,
 ): Promise<boolean> {
     return await bcrypt.compare(password, this.password);
 };
 
-const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
+const User: Model<User> = mongoose.model<User>("User", userSchema);
 
 export default User;

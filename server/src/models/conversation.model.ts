@@ -1,13 +1,16 @@
-import mongoose, { Schema, Document, Model, Types } from 'mongoose';
+import mongoose, {
+    Schema,
+    type Document,
+    type Model,
+    type Types,
+} from "mongoose";
 
-export interface IConversation extends Document {
+export interface Conversation extends Document {
     participants: Types.ObjectId[];
     lastMessage?: Types.ObjectId;
-    createdAt: Date;
-    updatedAt: Date;
 }
 
-const conversationSchema = new Schema<IConversation>(
+const conversationSchema = new Schema<Conversation>(
     {
         participants: [
             {
@@ -27,7 +30,7 @@ const conversationSchema = new Schema<IConversation>(
 // Prevent duplicate conversations between same 2 users
 conversationSchema.index({ participants: 1 });
 
-const Conversation: Model<IConversation> = mongoose.model<IConversation>(
+const Conversation: Model<Conversation> = mongoose.model<Conversation>(
     'Conversation',
     conversationSchema
 );
