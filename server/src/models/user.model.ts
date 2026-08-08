@@ -1,7 +1,8 @@
-import mongoose, { Schema, type Document, type Model } from "mongoose";
+import mongoose, { Schema, type Document, type Model, type Types } from "mongoose";
 import bcrypt from "bcryptjs";
 
 export interface User extends Document {
+    _id: Types.ObjectId;
     name: string;
     email: string;
     password: string;

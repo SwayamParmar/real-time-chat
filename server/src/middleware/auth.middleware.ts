@@ -1,12 +1,7 @@
-import jwt, {
-    JsonWebTokenError,
-    TokenExpiredError,
-    type JwtPayload as JwtLibPayload,
-} from "jsonwebtoken";
+import { JsonWebTokenError, TokenExpiredError,} from "jsonwebtoken";
 import type { NextFunction, Request, Response } from "express";
 
-import { env } from "../config/env";
-import type { JwtPayload } from "../types/jwt-payload.type";
+import { verifyToken } from "../utils/jwt.util";
 
 const authMiddleware = ( req: Request, res: Response, next: NextFunction ): void => {
     try {
@@ -22,8 +17,8 @@ const authMiddleware = ( req: Request, res: Response, next: NextFunction ): void
             return;
         }
 
-        const decoded = jwt.verify(token, env.JWT_SECRET,) as JwtPayload;
-        req.user = decoded;
+        const payload = verifyToken(token);
+        req.user = payload;
         next();
     } catch (error) {
         console.error("JWT Verification Error:", error);

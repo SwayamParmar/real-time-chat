@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 
 // Routes
-// import userRoutes from "./routes/user";
-// import conversationRoutes from "./routes/conversations";
+import userRoutes from "./routes/user.routes";
+import conversationRoutes from "./routes/conversation.routes";
 // import messageRoutes from "./routes/message";
 // import uploadRoutes from "./routes/uploadFile";
 
@@ -21,8 +21,8 @@ app.use(cors());
 /**
  * API Routes
  */
-// app.use("/api/user", userRoutes);
-// app.use("/api/conversations", conversationRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/conversations", conversationRoutes);
 // app.use("/api/messages", messageRoutes);
 // app.use("/api/upload", uploadRoutes);
 
