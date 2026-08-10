@@ -4,8 +4,8 @@ import cors from "cors";
 // Routes
 import userRoutes from "./routes/user.routes";
 import conversationRoutes from "./routes/conversation.routes";
-// import messageRoutes from "./routes/message";
-// import uploadRoutes from "./routes/uploadFile";
+import messageRoutes from "./routes/message.routes";
+import uploadRoutes from "./routes/upload-file.routes";
 
 // // Middleware
 // import errorHandler from "./middleware/errorHandler";
@@ -23,8 +23,8 @@ app.use(cors());
  */
 app.use("/api/user", userRoutes);
 app.use("/api/conversations", conversationRoutes);
-// app.use("/api/messages", messageRoutes);
-// app.use("/api/upload", uploadRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/upload", uploadRoutes);
 
 /**
  * Global Error Handler
