@@ -11,7 +11,7 @@ interface StoreMessageData {
     senderId: string;
     content?: string;
     messageType: MessageType;
-    file?: MessageFile;
+    file?: MessageFile | null;
 }
 
 export const getMessages = async (
