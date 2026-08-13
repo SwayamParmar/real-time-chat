@@ -27,6 +27,7 @@ export interface MarkAsReadData {
 
 export interface TypingData {
     conversationId: string;
+    userId: string;
 }
 
 export interface EditMessageData {
