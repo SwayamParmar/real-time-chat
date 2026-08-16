@@ -16,14 +16,14 @@ const Signup = () => {
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
-        fullName: '',
+        name: '',
         email: '',
         password: '',
         confirmPassword: '',
     });
 
     const [inputErrors, setInputErrors] = useState({
-        fullName: false,
+        name: false,
         email: false,
         password: false,
         confirmPassword: false,
@@ -58,9 +58,9 @@ const Signup = () => {
             });
         };
 
-        if (!formData.fullName.trim()) {
+        if (!formData.name.trim()) {
             showToast('Full Name is required');
-            setInputErrors((prev) => ({ ...prev, fullName: true }));
+            setInputErrors((prev) => ({ ...prev, name: true }));
             hasErrors = true;
         }
         if (!formData.email.trim() || !validateEmail(formData.email.trim())) {
@@ -136,7 +136,6 @@ const Signup = () => {
                 <p className="text-sm text-chat-faint mb-6">Join TalkStream — free, always.</p>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-
                     {/* Full Name */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
@@ -144,20 +143,20 @@ const Signup = () => {
                         </label>
                         <input
                             type="text"
-                            name="fullName"
-                            value={formData.fullName}
+                            name="name"
+                            value={formData.name}
                             onChange={handleChange}
                             placeholder="Your full name"
                             className={`w-full px-4 py-2.5 rounded-xl text-sm bg-surface-raised text-chat-primary
                                 placeholder:text-chat-ghost border outline-none
                                 transition-colors duration-150
                                 focus:border-brand focus:ring-2 focus:ring-brand/20
-                                ${inputErrors.fullName
+                                ${inputErrors.name
                                     ? 'border-red-500 ring-2 ring-red-500/20'
                                     : 'border-surface-border hover:border-surface-muted'
                                 }`}
                         />
-                        {inputErrors.fullName && (
+                        {inputErrors.name && (
                             <span className="text-[11px] text-red-400 font-mono">Full name is required</span>
                         )}
                     </div>
