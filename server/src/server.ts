@@ -11,9 +11,9 @@ const startServer = async (): Promise<void> => {
         await connectDB();
         const server = http.createServer(app);
         initSocket(server);
-        server.listen(env.PORT, () => {
+        server.listen(env.PORT, "0.0.0.0", () => {
             console.log(`🚀 Server running on port ${env.PORT}`);
-        })
+        });
     } catch (error) {
         console.error("Failed to start server.");
         console.error(error);
