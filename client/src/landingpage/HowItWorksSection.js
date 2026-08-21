@@ -1,125 +1,122 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import { FiLock, FiLink2, FiUpload, FiDownload } from 'react-icons/fi';
+import useReveal from './useReveal';
 
-const steps = [
+const Code = ({ children }) => <code className="code-inline">{children}</code>;
+
+/* Event names mirror server/src/socket/socket.ts exactly. */
+const STEPS = [
     {
-        icon: '🔐',
+        Icon: FiLock,
         title: 'Authenticate',
-        desc: 'User logs in with credentials. JWT token issued and injected into the socket handshake for persistent identity.',
-        delay: 0,
+        desc: 'Credentials are exchanged for a signed JWT. The same token is passed through the socket handshake, so the connection carries a verified identity.',
     },
     {
-        icon: '🔌',
-        title: 'Connect Socket',
-        desc: 'Socket.io establishes a persistent WebSocket connection. User joins their personal room for targeted events.',
-        delay: 100,
-    },
-    {
-        icon: '📤',
-        title: 'Emit Event',
+        Icon: FiLink2,
+        title: 'Connect & Join',
         desc: (
             <>
-                Client fires{' '}
-                <code style={{ color: 'var(--brand)', fontFamily: 'DM Mono, monospace', fontSize: 11 }}>message_send</code>.
-                {' '}Server validates, persists to MongoDB, emits to recipient&apos;s socket room.
+                Socket.IO opens a persistent connection. The user lands in a personal{' '}
+                <Code>user:&lt;id&gt;</Code> room, and <Code>joinConversation</Code> adds them to a
+                thread after a participant check.
             </>
         ),
-        delay: 200,
     },
     {
-        icon: '📥',
-        title: 'Receive & Render',
+        Icon: FiUpload,
+        title: 'Emit',
         desc: (
             <>
-                Recipient&apos;s client receives{' '}
-                <code style={{ color: 'var(--brand)', fontFamily: 'DM Mono, monospace', fontSize: 11 }}>message_receive</code>.
-                {' '}UI updates instantly. Read receipt emitted back to sender.
+                The client fires <Code>sendMessage</Code>. The server validates it, persists it to
+                MongoDB, and broadcasts to the conversation room.
             </>
         ),
-        delay: 300,
+    },
+    {
+        Icon: FiDownload,
+        title: 'Receive & Confirm',
+        desc: (
+            <>
+                Participants get <Code>receiveMessage</Code> and render immediately.{' '}
+                <Code>messagesDelivered</Code> and <Code>messagesSeen</Code> travel back to update
+                the sender&apos;s receipts.
+            </>
+        ),
     },
 ];
 
-const StepCard = ({ icon, title, desc, delay, cardRef }) => (
-    <div
-        ref={cardRef}
-        className="reveal px-6 text-center"
-        style={{ transitionDelay: `${delay}ms` }}
-    >
-        <div
-            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 relative z-[1] text-[22px] transition-all duration-300 cursor-default"
-            style={{ background: 'var(--surface-base)', border: '1px solid var(--surface-border)' }}
-            onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'var(--brand)';
-                e.currentTarget.style.boxShadow = '0 0 24px var(--brand-glow)';
-            }}
-            onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--surface-border)';
-                e.currentTarget.style.boxShadow = 'none';
-            }}
-        >
-            {icon}
-        </div>
-        <div className="font-syne font-bold text-[14px] mb-2" style={{ color: 'var(--chat-primary)' }}>{title}</div>
-        <div className="text-[12.5px] leading-[1.65]" style={{ color: 'var(--chat-faint)' }}>{desc}</div>
-    </div>
-);
-
-const HowItWorksSection = () => {
-    const cardRefs = useRef([]);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-            { threshold: 0.1 }
-        );
-        cardRefs.current.forEach(el => el && observer.observe(el));
-        return () => observer.disconnect();
-    }, []);
+const StepCard = ({ Icon, title, desc, index, delayClass }) => {
+    const reveal = useReveal();
 
     return (
-        <section id="how" className="py-[100px] px-6" style={{ background: 'var(--surface-panel)' }}>
-            <div className="max-w-[1200px] mx-auto">
-                {/* Label */}
-                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] mb-4"
-                    style={{ color: 'var(--brand)' }}>
-                    <span className="inline-block w-[18px] h-px" style={{ background: 'var(--brand)' }} />
-                    Architecture
-                </div>
-
-                <h2 className="font-syne font-extrabold tracking-[-0.03em] leading-[1.1] mb-4"
-                    style={{ fontSize: 'clamp(28px, 4vw, 44px)', color: 'var(--chat-primary)' }}>
-                    How a message travels<br />from you to them.
-                </h2>
-
-                <p className="text-[16px] leading-[1.7] mb-[60px]"
-                    style={{ color: 'var(--chat-muted)', maxWidth: 520 }}>
-                    A sub-50ms pipeline from keypress to delivery — here's how TalkStream's real-time engine works under the hood.
-                </p>
-
-                {/* Steps with connector line */}
-                <div className="relative">
-                    {/* Connector line */}
-                    <div
-                        className="absolute top-7 hide-mobile"
-                        style={{
-                            left: '10%', right: '10%', height: 1,
-                            background: 'linear-gradient(90deg, transparent, var(--brand-subtle), var(--brand-subtle), transparent)',
-                        }}
-                    />
-
-                    <div className="grid grid-cols-4 gap-0">
-                        {steps.map((s, i) => (
-                            <StepCard
-                                key={s.title}
-                                {...s}
-                                cardRef={el => (cardRefs.current[i] = el)}
-                            />
-                        ))}
-                    </div>
-                </div>
+        <div ref={reveal} className={`step reveal ${delayClass} relative px-2 sm:px-5 text-center`}>
+            {/* Icon + step number */}
+            <div className="relative inline-flex mb-5">
+                <span
+                    className="icon-chip w-14 h-14 rounded-full"
+                    style={{ background: 'var(--surface-base)' }}
+                >
+                    <Icon size={21} aria-hidden="true" />
+                </span>
+                <span
+                    className="absolute -top-1 -right-1 w-[19px] h-[19px] rounded-full font-mono
+                        text-[10px] font-medium flex items-center justify-center"
+                    style={{
+                        background: 'var(--brand)',
+                        color: '#fff',
+                        border: '2px solid var(--surface-panel)',
+                    }}
+                >
+                    {index + 1}
+                </span>
             </div>
-        </section>
+
+            <h3 className="font-display font-bold text-[15px] mb-2" style={{ color: 'var(--chat-primary)' }}>
+                {title}
+            </h3>
+            <p className="text-[13px] leading-[1.7] m-0" style={{ color: 'var(--chat-faint)' }}>
+                {desc}
+            </p>
+        </div>
     );
 };
+
+const DELAYS = ['', 'reveal-d1', 'reveal-d2', 'reveal-d3'];
+
+const HowItWorksSection = () => (
+    <section id="how" className="section" style={{ background: 'var(--surface-panel)' }}>
+        <div className="container-ts">
+            <header className="section-head">
+                <span className="eyebrow">Architecture</span>
+                <h2 className="section-title">
+                    How a message travels
+                    <br className="hidden sm:block" /> from you to them.
+                </h2>
+                <p className="section-sub">
+                    Four hops from keypress to delivered — here is what the real-time engine does
+                    on every single message.
+                </p>
+            </header>
+
+            <div className="relative">
+                {/* Connector rail — only meaningful when the steps sit in one row */}
+                <div
+                    className="hidden lg:block absolute top-7 left-[12%] right-[12%] h-px"
+                    aria-hidden="true"
+                    style={{
+                        background:
+                            'linear-gradient(90deg, transparent, var(--brand-subtle), var(--brand-subtle), transparent)',
+                    }}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-8 lg:gap-0">
+                    {STEPS.map((s, i) => (
+                        <StepCard key={s.title} {...s} index={i} delayClass={DELAYS[i]} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    </section>
+);
 
 export default HowItWorksSection;

@@ -1,26 +1,19 @@
 import React from "react";
 import { FiMessageSquare } from "react-icons/fi";
+import EmptyState from "../../components/ui/EmptyState";
 
-const NoConversationSelected = () => {
-    return (
-        <div className="flex-1 flex flex-col items-center justify-center bg-surface-base gap-4">
-            <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg,#7C6FCD20,#6057B010)" }}
-            >
-                <FiMessageSquare className="text-[#7C6FCD] w-10 h-10" />
-            </div>
-
-            <div className="text-center">
-                <p className="text-chat-secondary text-sm font-semibold font-sans">
-                    No conversation selected
-                </p>
-                <p className="text-chat-ghost text-xs mt-1 font-sans">
-                    Pick someone from the list to start chatting
-                </p>
-            </div>
-        </div>
-    );
-};
+/*
+ * Desktop-only in practice: below md the room pane is hidden while no
+ * conversation is open, so this is what fills the empty right-hand column.
+ */
+const NoConversationSelected = () => (
+    <div className="flex-1 flex items-center justify-center bg-surface-base">
+        <EmptyState
+            icon={FiMessageSquare}
+            title="No conversation selected"
+            description="Pick someone from the list to start chatting."
+        />
+    </div>
+);
 
 export default NoConversationSelected;

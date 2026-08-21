@@ -2,34 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────
+   Global base.
+
+   This is the single source of truth for document-level styling.
+   The chat app used to inject a competing <style> block at runtime
+   (chatUtils.GlobalStyles) which reset the body background to a
+   third colour and redefined the scrollbar with different values.
+   Everything worth keeping from it now lives here.
+───────────────────────────────────────────────────────────── */
+
+:root {
+  /* Safe-area insets, resolved once so components can compose them
+     without repeating the env() fallback dance. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Stops iOS Safari from inflating text in landscape. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
-  font-family: 'Public Sans', 'Arial', 'Helvetica', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  height: 100%;
   margin: 0;
   padding: 0;
+  background: #0b0d14; /* surface.base */
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Removes the grey flash on tap without removing any focus affordance. */
+  -webkit-tap-highlight-color: transparent;
 }
 
-@keyframes float {
-  0% {
-      transform: translateY(0px);
-  }
-  50% {
-      transform: translateY(-20px);
-  }
-  100% {
-      transform: translateY(0px);
-  }
+/* ─── Focus ───────────────────────────────────────────────────
+   A visible, consistent keyboard-only ring. Mouse and touch users
+   never see it; keyboard users always do.
+───────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #22d3ee; /* brand.highlight */
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.bubble {
-  animation: float 6s ease-in-out infinite;
+/* ─── Scrollbars ──────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Custom scrollbar class */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #262b40; /* surface.muted */
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #333a55;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #262b40 transparent;
+}
+
 .hide-scrollbar::-webkit-scrollbar {
-  width: 0px;
+  width: 0;
+  height: 0;
   background: transparent;
 }
 
@@ -38,23 +89,51 @@ body {
   scrollbar-width: none;
 }
 
-/* Horizontal scrollbar */
-::-webkit-scrollbar {
-  height: 5px;
+/* ─── Chat-app helpers ────────────────────────────────────── */
+
+/* Full viewport height that survives the mobile URL bar and the
+   on-screen keyboard. 100vh is kept as the fallback for engines
+   without dvh support. */
+.h-app {
+  height: 100vh;
+  height: 100dvh;
 }
 
-/* Vertical scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
+/* Scroll containers inside the chat shell must not chain their
+   overscroll to the document, or iOS rubber-bands the whole page. */
+.scroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Thumb */
-::-webkit-scrollbar-thumb {
-  background-color: #252A40; /* your surface.muted */
-  border-radius: 9999px;
+/* Long unbroken strings (URLs, base64, "aaaa…") must wrap inside a
+   bubble rather than forcing the bubble wider than its max-width. */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-/* Track */
-::-webkit-scrollbar-track {
-  background: transparent;
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.bubble {
+  animation: float 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

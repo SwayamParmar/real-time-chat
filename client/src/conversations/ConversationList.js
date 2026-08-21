@@ -1,116 +1,184 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useChatStore } from "../store/chatStore";
 import { useAuthStore } from "../store/authStore";
-import { Avatar, StatusDot } from "./chatUtils";
+import { Avatar } from "./chatUtils";
+import { useChatLayout } from "./ChatLayoutContext";
+import { lastMessagePreview } from "./lastMessagePreview";
 import ConversationListHeader from "./chatComponent/ConversationListHeader";
-import Loading from "../components/Loading";
+import { ConversationSkeleton } from "../components/ui/Skeleton";
+import EmptyState from "../components/ui/EmptyState";
 import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
 import { IoBan } from "react-icons/io5";
-import { HiMiniPhoto, HiVideoCamera, HiDocument } from "react-icons/hi2";
+import { FiMessageCircle, FiSearch } from "react-icons/fi";
 
-const ConversationList = () => {
-    const { onlineUsers, conversations, fetchMessages, activeConversationId, typingUsers, loadingConversations } = useChatStore();
-    const { user } = useAuthStore();
+/* ─────────────────────────────────────────────────────────────
+   Conversation list.
+
+   Search filters the conversations already held in memory — it
+   is presentation over data the store has fetched, and issues no
+   request of its own. The input existed before with its state
+   commented out, so it looked usable and did nothing.
+───────────────────────────────────────────────────────────── */
+
+const ConversationRow = ({ conv, otherUser, isActive, isOnline, isTyping, onOpen }) => {
+    const { text, icon: PreviewIcon } = lastMessagePreview(conv.lastMessage);
+    const unread = conv.unreadCount > 0;
+    const timestamp = conv.lastMessage?.createdAt;
 
     return (
-        <div className="w-[360px] min-w-[260px] bg-surface-panel border-r border-r-white/10 flex flex-col h-screen font-sans">
-            <ConversationListHeader />
-            <div className="flex-1 overflow-y-auto py-2">
-                {loadingConversations ? (
-                    <div className="flex items-center justify-center h-full">
-                        <Loading width={40} height={40} />
-                    </div>
-                ) : conversations.length === 0 ? (
-                    <div className="text-chat-faint text-sm text-center mt-10">
-                        No conversations yet
-                    </div>
-                ) : (
-                    conversations.map((conv) => {
-                        const otherUser = conv.participants.find(
-                            p => p._id !== user.id
-                        );
-                        const titleMessage = conv.lastMessage?.messageType === "text"
-                            ? conv.lastMessage?.content
-                            : conv.lastMessage?.messageType === "image"
-                                ? "Sent a photo"
-                                : conv.lastMessage?.messageType === "video"
-                                    ? "Sent a video"
-                                    : conv.lastMessage?.messageType === "file"
-                                        ? conv.lastMessage?.file?.name || "Sent a file"
-                                        : conv.lastMessage?.content;
+        <li>
+            <button
+                type="button"
+                onClick={onOpen}
+                aria-current={isActive ? "true" : undefined}
+                className={`
+                    w-full px-3 sm:px-4 py-2.5 flex items-center gap-3 text-left
+                    border-l-2 transition-colors duration-150
+                    focus-visible:outline-none focus-visible:bg-surface-raised
+                    focus-visible:border-l-brand-highlight
+                    ${isActive
+                        ? "bg-surface-raised border-l-brand"
+                        : "border-l-transparent hover:bg-surface-raised/60 active:bg-surface-raised"
+                    }
+                `}
+            >
+                <Avatar name={otherUser?.name} id={otherUser?._id} size="md" online={isOnline} />
 
-                        return (
-                            <button
-                                key={conv._id}
-                                onClick={() => fetchMessages(conv._id)}
-                                className={`
-                                    w-full px-5 py-2.5 flex items-center gap-3 text-left
-                                    border-l-2 transition-all duration-150 
-                                    ${activeConversationId === conv._id ? "bg-surface-border border-brand" : "bg-transparent border-transparent hover:bg-[#161920]"} `}
+                <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <span className="flex items-baseline justify-between gap-2">
+                        <span
+                            className={`truncate text-[14.5px] tracking-tight
+                                ${unread ? "text-chat-primary font-bold" : "text-chat-secondary font-semibold"}`}
+                        >
+                            {otherUser?.name || "Unknown"}
+                        </span>
+
+                        {timestamp && (
+                            <time
+                                dateTime={timestamp}
+                                className={`text-[11px] flex-shrink-0 tabular-nums
+                                    ${unread ? "text-brand font-semibold" : "text-chat-ghost"}`}
                             >
-                                <div className="relative">
-                                    <Avatar
-                                        text={otherUser?.name?.slice(0, 2).toUpperCase()}
-                                        color="#7C6FCD"
-                                        size={42}
-                                    />
-                                    {onlineUsers.includes(otherUser?._id) && (
-                                        <span className="absolute bottom-0.5 right-0.5">
-                                            <StatusDot status='online' />
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-chat-secondary font-semibold text-sm tracking-tight truncate">
-                                            {otherUser?.name}
-                                        </span>
-                                        <span className="text-chat-ghost text-[11px] flex-shrink-0 ml-1.5">
-                                            {conv.lastMessage?.createdAt ? formatTimestampOnList(conv.lastMessage.createdAt) : ""}
-                                        </span>
-                                    </div>
+                                {formatTimestampOnList(timestamp)}
+                            </time>
+                        )}
+                    </span>
 
-                                    <div className="flex justify-between mt-0.5">
-                                        <span className="text-chat-faint text-xs truncate max-w-[200px]" title={titleMessage}>
-                                            {typingUsers[conv._id] ? (
-                                                <span className="text-brand italic">typing...</span>
-                                            ) : conv.lastMessage?.isDeleted ? (
-                                                <span className="italic opacity-50 flex gap-1">
-                                                    <IoBan className="inline" size={15} /> Message deleted
-                                                </span>
-                                            ) : (
-                                                conv.lastMessage?.messageType === "text" ? (
-                                                    conv.lastMessage?.content
-                                                ) : conv.lastMessage?.messageType === "image" ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <HiMiniPhoto className="w-4 h-4" />
-                                                        Sent a photo
-                                                    </span>
-                                                ) : conv.lastMessage?.messageType === "video" ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <HiVideoCamera className="w-4 h-4" />
-                                                        Sent a video
-                                                    </span>
-                                                ) : conv.lastMessage?.messageType === "file" ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <HiDocument className="w-4 h-4" />
-                                                        {conv.lastMessage?.file?.name || "Sent a file"}
-                                                    </span>
-                                                ) : (
-                                                    conv.lastMessage?.content
-                                                )
-                                            )}
-                                        </span>
-                                        {conv.unreadCount > 0 && (
-                                            <span className="bg-brand text-white text-[10px] font-bold rounded-[10px] px-1.5 min-w-[18px] text-center flex-shrink-0 ml-1.5">
-                                                {conv.unreadCount}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })
+                    <span className="flex items-center justify-between gap-2">
+                        <span
+                            className={`flex items-center gap-1 min-w-0 text-[13px]
+                                ${unread ? "text-chat-muted" : "text-chat-faint"}`}
+                        >
+                            {isTyping ? (
+                                <span className="text-brand-highlight font-medium truncate">
+                                    typing…
+                                </span>
+                            ) : conv.lastMessage?.isDeleted ? (
+                                <>
+                                    <IoBan aria-hidden="true" size={13} className="flex-shrink-0" />
+                                    <span className="italic opacity-70 truncate">Message deleted</span>
+                                </>
+                            ) : (
+                                <>
+                                    {PreviewIcon && (
+                                        <PreviewIcon aria-hidden="true" className="w-3.5 h-3.5 flex-shrink-0" />
+                                    )}
+                                    <span className="truncate">{text}</span>
+                                </>
+                            )}
+                        </span>
+
+                        {unread && (
+                            <span
+                                className="flex-shrink-0 bg-brand text-white text-[10.5px] font-bold
+                                           rounded-full px-1.5 h-[18px] min-w-[18px]
+                                           inline-flex items-center justify-center tabular-nums"
+                            >
+                                {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
+                                <span className="sr-only"> unread messages</span>
+                            </span>
+                        )}
+                    </span>
+                </span>
+            </button>
+        </li>
+    );
+};
+
+const ConversationList = () => {
+    const {
+        onlineUsers,
+        conversations,
+        fetchMessages,
+        activeConversationId,
+        typingUsers,
+        loadingConversations,
+    } = useChatStore();
+    const { user } = useAuthStore();
+    const { openRoom } = useChatLayout();
+
+    const [search, setSearch] = useState("");
+
+    // Pair each conversation with the participant it is with, once, so a row
+    // does not re-scan the participants array on every render pass.
+    const rows = useMemo(
+        () =>
+            conversations.map((conv) => ({
+                conv,
+                otherUser: conv.participants?.find((p) => p._id !== user?.id),
+            })),
+        [conversations, user?.id]
+    );
+
+    const query = search.trim().toLowerCase();
+    const visibleRows = useMemo(
+        () =>
+            query
+                ? rows.filter(({ otherUser }) => otherUser?.name?.toLowerCase().includes(query))
+                : rows,
+        [rows, query]
+    );
+
+    const handleOpen = (conversationId) => {
+        // Unchanged store call — the mobile pane switch is purely additive.
+        fetchMessages(conversationId);
+        openRoom();
+    };
+
+    return (
+        <div className="flex flex-col h-full min-h-0 font-sans">
+            <ConversationListHeader search={search} onSearchChange={setSearch} />
+
+            <div className="flex-1 min-h-0 overflow-y-auto scroll-contain py-1.5">
+                {loadingConversations ? (
+                    <ConversationSkeleton />
+                ) : conversations.length === 0 ? (
+                    <EmptyState
+                        icon={FiMessageCircle}
+                        title="No conversations yet"
+                        description="Start one with the compose button above and it will show up here."
+                    />
+                ) : visibleRows.length === 0 ? (
+                    <EmptyState
+                        compact
+                        icon={FiSearch}
+                        title="No matches"
+                        description={`Nothing here matches "${search.trim()}".`}
+                    />
+                ) : (
+                    <ul className="list-none m-0 p-0">
+                        {visibleRows.map(({ conv, otherUser }) => (
+                            <ConversationRow
+                                key={conv._id}
+                                conv={conv}
+                                otherUser={otherUser}
+                                isActive={activeConversationId === conv._id}
+                                isOnline={onlineUsers.includes(otherUser?._id)}
+                                isTyping={Boolean(typingUsers[conv._id])}
+                                onOpen={() => handleOpen(conv._id)}
+                            />
+                        ))}
+                    </ul>
                 )}
             </div>
         </div>
