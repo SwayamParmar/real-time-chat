@@ -37,25 +37,6 @@ const BtnSecondary = ({ href, children, target }) => (
     </a>
 );
 
-/* ── Typing Indicator ── */
-const TypingIndicator = () => (
-    <div
-        className="flex items-center gap-[6px] px-3 py-2 rounded-xl self-start w-fit"
-        style={{ background: 'var(--surface-raised)', borderBottomLeftRadius: '4px' }}
-    >
-        {[0, 1, 2].map(i => (
-            <span
-                key={i}
-                className="block w-[6px] h-[6px] rounded-full"
-                style={{ background: 'var(--chat-faint)' }}
-            // Tailwind animation classes from your config
-            // Using inline style as fallback for custom keyframe
-            // Use your own Tailwind animation classes: animate-typing-bounce-0 etc.
-            />
-        ))}
-    </div>
-);
-
 /* ── Conversation Item ── */
 const ConvoItem = ({ initials, name, preview, badge, statusColor, avatarColor, active }) => (
     <div
