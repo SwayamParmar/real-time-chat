@@ -94,7 +94,7 @@ const Header = () => {
                             href={GITHUB_URL}
                             target="_blank"
                             rel="noreferrer"
-                            className="nav-link flex items-center gap-2"
+                            className="nav-link !flex items-center gap-2"
                             aria-label="View source on GitHub"
                         >
                             <FiGithub size={15} aria-hidden="true" />

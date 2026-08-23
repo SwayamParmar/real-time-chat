@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+const config = {
   content: ["./src/**/*.{html,js,jsx,ts,tsx}"],
   theme: {
     // Declared in full (rather than via extend) so the extra 'xs' breakpoint
@@ -18,7 +18,6 @@ export default {
       maxWidth: {
         "chat": "1600px"
       },
-
 
       spacing: {
         // Resolved in index.css from env(safe-area-inset-*).
@@ -177,3 +176,5 @@ export default {
   },
   plugins: [],
 };
+
+module.exports = config;

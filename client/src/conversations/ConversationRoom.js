@@ -188,10 +188,7 @@ const MessageBubble = memo(({ msg, isMe, isGroupStart, isGroupEnd, onEdit, onDel
     if (msg.isDeleted) {
         return (
             <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${isGroupEnd ? "mb-2" : "mb-0.5"}`}>
-                <div
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] rounded-2xl
-                               bg-surface-raised text-chat-faint italic border border-surface-border"
-                >
+                <div className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] rounded-2xl bg-surface-raised text-chat-faint italic border border-surface-border">
                     <IoBan aria-hidden="true" size={15} className="flex-shrink-0" />
                     This message was deleted
                 </div>
@@ -211,8 +208,7 @@ const MessageBubble = memo(({ msg, isMe, isGroupStart, isGroupEnd, onEdit, onDel
 
     return (
         <div
-            className={`flex group items-end gap-1 ${isMe ? "justify-end" : "justify-start"}
-                        ${isGroupEnd ? "mb-2" : "mb-0.5"} ${isGroupStart ? "mt-1" : ""}`}
+            className={`flex group items-end gap-1 ${isMe ? "justify-end" : "justify-start"} ${isGroupEnd ? "mb-2" : "mb-0.5"} ${isGroupStart ? "mt-1" : ""}`}
         >
             {/* Sits before the bubble in the flex row, so an outgoing message
                 gets its actions on the outside edge. */}
