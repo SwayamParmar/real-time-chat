@@ -1,73 +1,88 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 
-// ── Section Components ──────────────────────────────────────────────────────
-import Header from '../landingpage/Header';
-import HeroSection from '../landingpage/HeroSection';
-import StatsStrip from '../landingpage/StatsStrip';
-import FeaturesSection from '../landingpage/FeaturesSection';
-import HowItWorksSection from '../landingpage/HowItWorksSection';
-import TechStackSection from '../landingpage/TechStackSection';
-import ModulesSection from '../landingpage/ModulesSection';
-import CTASection from '../landingpage/CTASection';
-import Footer from '../landingpage/Footer';
 import '../landingpage/landing.css';
 
-const Home = () => {
+// ── Above the fold: shipped in the initial bundle ───────────────────────────
+import Header from '../landingpage/Header';
+import HeroSection from '../landingpage/HeroSection';
 
-    // ── Global scroll-reveal observer ─────────────────────────────────────────
-    // Each section component also registers its own observer on mount,
-    // but this one catches any reveal elements added after initial render.
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                    }
-                });
-            },
-            { threshold: 0.1 }
-        );
+// ── Below the fold: split into separate chunks ──────────────────────────────
+// Everything past the hero moves out of the entry bundle. The browser still
+// requests these chunks straight away (in parallel, alongside the main one),
+// but the hero can parse, execute and paint without waiting on them — which
+// is what matters for first paint on a slow mobile connection.
+const StatsStrip = lazy(() => import('../landingpage/StatsStrip'));
+const FeaturesSection = lazy(() => import('../landingpage/FeaturesSection'));
+const HowItWorksSection = lazy(() => import('../landingpage/HowItWorksSection'));
+const TechStackSection = lazy(() => import('../landingpage/TechStackSection'));
+const ModulesSection = lazy(() => import('../landingpage/ModulesSection'));
+const SecuritySection = lazy(() => import('../landingpage/SecuritySection'));
+const FAQSection = lazy(() => import('../landingpage/FAQSection'));
+const CTASection = lazy(() => import('../landingpage/CTASection'));
+const Footer = lazy(() => import('../landingpage/Footer'));
 
-        const revealEls = document.querySelectorAll('.reveal');
-        revealEls.forEach((el) => observer.observe(el));
+/**
+ * Reserves vertical space while a lazy section is still loading, so the page
+ * does not shift as chunks arrive (CLS stays at zero).
+ */
+const SectionFallback = ({ minHeight = 420 }) => (
+    <div style={{ minHeight }} aria-hidden="true" />
+);
 
-        return () => observer.disconnect();
-    }, []);
+const Home = () => (
+    <div className="landing-root">
+        <Header />
 
-    return (
-        <div className="landing-root">
-            {/* ── Fixed Header ── */}
-            <Header />
+        <main>
+            {/* 1. Hero — headline, tech pills, CTAs, product mockup */}
+            <HeroSection />
 
-            {/* ── Page Sections ── */}
-            <main>
-                {/* 1. Hero — headline, subtext, tech pills, CTA buttons, chat mockup */}
-                <HeroSection />
-
-                {/* 2. Stats strip — 12 modules, <50ms latency, ∞ scroll, etc. */}
+            {/* Below-the-fold sections stream in as their chunks resolve. */}
+            <Suspense fallback={<SectionFallback minHeight={120} />}>
+                {/* 2. Stats — latency, receipts, history, upload limit */}
                 <StatsStrip />
+            </Suspense>
 
-                {/* 3. Features — 9-card grid with icons, titles, descriptions */}
+            <Suspense fallback={<SectionFallback minHeight={700} />}>
+                {/* 3. Features — nine capability tiles */}
                 <FeaturesSection />
+            </Suspense>
 
-                {/* 4. How It Works — 4-step flow: auth → socket → emit → receive */}
+            <Suspense fallback={<SectionFallback />}>
+                {/* 4. How It Works — auth, connect, emit, receive */}
                 <HowItWorksSection />
+            </Suspense>
 
-                {/* 5. Tech Stack — 5 tech cards + frontend↔backend architecture diagram */}
+            <Suspense fallback={<SectionFallback minHeight={620} />}>
+                {/* 5. Tech Stack — layers plus the frontend/backend diagram */}
                 <TechStackSection />
+            </Suspense>
 
-                {/* 6. Modules — all 12 engineering modules with numbered badges + tags */}
+            <Suspense fallback={<SectionFallback minHeight={700} />}>
+                {/* 6. Modules — the twelve engineering modules */}
                 <ModulesSection />
+            </Suspense>
 
-                {/* 7. CTA — strong call to action with demo + GitHub buttons */}
+            <Suspense fallback={<SectionFallback minHeight={520} />}>
+                {/* 7. Security — what actually guards the data */}
+                <SecuritySection />
+            </Suspense>
+
+            <Suspense fallback={<SectionFallback minHeight={560} />}>
+                {/* 8. FAQ — native <details>, no JS of its own */}
+                <FAQSection />
+            </Suspense>
+
+            <Suspense fallback={<SectionFallback minHeight={380} />}>
+                {/* 9. CTA — sign-up and source links */}
                 <CTASection />
-            </main>
+            </Suspense>
+        </main>
 
-            {/* ── Footer ── */}
+        <Suspense fallback={<SectionFallback minHeight={360} />}>
             <Footer />
-        </div>
-    );
-};
+        </Suspense>
+    </div>
+);
 
 export default Home;

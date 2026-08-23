@@ -1,6 +1,9 @@
 // components/ConversationRoomHeader.js
-import { Avatar, StatusDot } from "../chatUtils";
+import { Avatar } from "../chatUtils";
+import { useChatLayout } from "../ChatLayoutContext";
+import IconButton from "../../components/ui/IconButton";
 import {
+    FiArrowLeft,
     FiPhone,
     FiVideo,
     FiSearch,
@@ -9,43 +12,85 @@ import {
 import { useChatStore } from "../../store/chatStore";
 import { formatLastSeen } from "../../timeFormat/formatTimestamp";
 
+/* ─────────────────────────────────────────────────────────────
+   Room header.
+
+   The call / video / search / overflow icons were previously
+   bare <svg> elements: no button semantics, no label, no focus,
+   no keyboard access — and no behaviour behind them either.
+   They are real disabled buttons now, so they are announced and
+   presented honestly as not-yet-available rather than looking
+   live and silently doing nothing.
+───────────────────────────────────────────────────────────── */
+
+const ACTIONS = [
+    { icon: FiPhone, label: "Voice call" },
+    { icon: FiVideo, label: "Video call" },
+    { icon: FiSearch, label: "Search in conversation" },
+];
+
 const ConversationRoomHeader = ({ user }) => {
     const { onlineUsers, typingUsers, activeConversationId } = useChatStore();
+    const { closeRoom } = useChatLayout();
+
     const isOnline = onlineUsers.includes(user?._id);
     const isTyping = typingUsers[activeConversationId];
 
     return (
-        <div className="px-5 py-3.5 bg-surface-panel border-b border-surface-border flex items-center justify-between">
-            <div className="flex items-center gap-3">
-                <div className="relative">
-                    <Avatar
-                        text={user?.name?.slice(0, 2).toUpperCase()}
-                        color="#7C6FCD"
-                        size={40}
-                    />
-                </div>
+        <header
+            className="flex-shrink-0 flex items-center gap-1 sm:gap-2
+                       px-2 sm:px-4 py-2.5
+                       pt-[max(0.625rem,var(--safe-top))]
+                       bg-surface-panel border-b border-surface-border"
+        >
+            {/* Back to the list — phones only; the two panes sit side by side
+                from md up, where there is nothing to go back to. */}
+            <IconButton
+                label="Back to conversations"
+                icon={FiArrowLeft}
+                iconSize={20}
+                onClick={closeRoom}
+                className="md:hidden"
+            />
 
-                <div>
-                    <p className="text-chat-primary font-semibold text-sm">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                <Avatar name={user?.name} id={user?._id} size="sm" online={isOnline} />
+
+                <div className="min-w-0">
+                    <p className="text-chat-primary font-semibold text-[14.5px] tracking-tight truncate m-0">
                         {user?.name}
                     </p>
-                    {isTyping ? (
-                        <span className="text-brand italic">typing...</span>
-                    ) : isOnline ? (
-                        <span className="text-green-500 text-sm">Online</span>
-                    ) : (
-                        <span className="text-chat-faint text-sm">{formatLastSeen(user?.lastSeen)}</span>
-                    )}
+
+                    {/* One line, three states — kept at a fixed size so the
+                        header never reflows as presence changes. */}
+                    <p className="text-[12px] leading-tight truncate m-0 mt-0.5">
+                        {isTyping ? (
+                            <span className="text-brand-highlight font-medium">typing…</span>
+                        ) : isOnline ? (
+                            <span className="text-status-online">Online</span>
+                        ) : (
+                            <span className="text-chat-faint">{formatLastSeen(user?.lastSeen)}</span>
+                        )}
+                    </p>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 text-chat-faint">
-                <FiPhone className="w-5 h-5" />
-                <FiVideo className="w-5 h-5" />
-                <FiSearch className="w-5 h-5" />
-                <FiMoreVertical className="w-5 h-5" />
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+                {ACTIONS.map(({ icon, label }) => (
+                    <IconButton
+                        key={label}
+                        label={`${label} (coming soon)`}
+                        icon={icon}
+                        disabled
+                        // Voice and video are desktop-only chrome for now; on a
+                        // phone the header space is better spent on the name.
+                        className="hidden sm:inline-flex"
+                    />
+                ))}
+
+                <IconButton label="More options (coming soon)" icon={FiMoreVertical} disabled />
             </div>
-        </div>
+        </header>
     );
 };
 

@@ -3,7 +3,7 @@ import { MessageType } from "../enums/message-type.enum";
 import type { MessageFile } from "../types/message-file.type";
 import type { Types } from "mongoose";
 
-export interface Message extends Document {
+export interface Message extends Document<Types.ObjectId> {
     conversationId: Types.ObjectId;
     sender: Types.ObjectId;
 

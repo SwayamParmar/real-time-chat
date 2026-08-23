@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FiEye, FiEyeOff, FiUser, FiMail, FiLock, FiArrowRight } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { Slide } from 'react-toastify';
 import config from '../config';
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import AuthShell from '../components/AuthShell';
 
 const Signup = () => {
     const navigate = useNavigate();
@@ -110,173 +111,161 @@ const Signup = () => {
         <button
             type="button"
             onClick={onToggle}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-chat-faint hover:text-brand transition-colors duration-150"
+            className="auth-toggle"
+            aria-label={show ? 'Hide password' : 'Show password'}
         >
-            {show ? <FaEye size={13} /> : <FaEyeSlash size={13} />}
+            {show ? <FiEye size={16} /> : <FiEyeOff size={16} />}
         </button>
     );
 
     return (
-        <section className="min-h-screen bg-surface-base flex flex-col items-center justify-center px-4 py-10">
+        <AuthShell
+            title="Create an account"
+            subtitle="Free forever — you'll be chatting in seconds."
+            footer={
+                <>
+                    Already have an account?{' '}
+                    <NavLink
+                        to="/login"
+                        className="font-semibold no-underline transition-colors duration-150"
+                        style={{ color: 'var(--brand)' }}
+                    >
+                        Sign in
+                    </NavLink>
+                </>
+            }
+        >
+            <form onSubmit={handleSubmit} className="flex flex-col gap-[18px]">
 
-            {/* ── Logo ── */}
-            <div className="flex items-center gap-2.5 mb-8">
-                <div className="w-8 h-8 rounded-[9px] bg-brand flex items-center justify-center text-[15px] shadow-bubble">
-                    💬
-                </div>
-                <span className="text-[19px] font-bold tracking-tight text-chat-primary">
-                    Talk<span className="text-brand">Stream</span>
-                </span>
-            </div>
-
-            {/* ── Card ── */}
-            <div className="w-full max-w-sm bg-surface-panel border border-surface-border rounded-2xl p-8 shadow-panel">
-
-                <h1 className="text-xl font-bold text-chat-primary mb-1">Create an account</h1>
-                <p className="text-sm text-chat-faint mb-6">Join TalkStream — free, always.</p>
-
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    {/* Full Name */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
-                            Full Name
-                        </label>
+                {/* ── Full Name ── */}
+                <div className="auth-field">
+                    <label htmlFor="signup-name" className="auth-label">
+                        Full Name
+                    </label>
+                    <div className="auth-input-wrap">
+                        <span className="auth-icon">
+                            <FiUser size={16} aria-hidden="true" />
+                        </span>
                         <input
+                            id="signup-name"
                             type="text"
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
                             placeholder="Your full name"
-                            className={`w-full px-4 py-2.5 rounded-xl text-sm bg-surface-raised text-chat-primary
-                                placeholder:text-chat-ghost border outline-none
-                                transition-colors duration-150
-                                focus:border-brand focus:ring-2 focus:ring-brand/20
-                                ${inputErrors.name
-                                    ? 'border-red-500 ring-2 ring-red-500/20'
-                                    : 'border-surface-border hover:border-surface-muted'
-                                }`}
+                            autoComplete="name"
+                            aria-invalid={inputErrors.name || undefined}
+                            className={`auth-input ${inputErrors.name ? 'is-error' : ''}`}
                         />
-                        {inputErrors.name && (
-                            <span className="text-[11px] text-red-400 font-mono">Full name is required</span>
-                        )}
                     </div>
+                    {inputErrors.name && (
+                        <span className="auth-error">Full name is required</span>
+                    )}
+                </div>
 
-                    {/* Email */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
-                            Email
-                        </label>
+                {/* ── Email ── */}
+                <div className="auth-field">
+                    <label htmlFor="signup-email" className="auth-label">
+                        Email
+                    </label>
+                    <div className="auth-input-wrap">
+                        <span className="auth-icon">
+                            <FiMail size={16} aria-hidden="true" />
+                        </span>
                         <input
+                            id="signup-email"
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="you@example.com"
-                            className={`w-full px-4 py-2.5 rounded-xl text-sm bg-surface-raised text-chat-primary
-                                placeholder:text-chat-ghost border outline-none
-                                transition-colors duration-150
-                                focus:border-brand focus:ring-2 focus:ring-brand/20
-                                ${inputErrors.email
-                                    ? 'border-red-500 ring-2 ring-red-500/20'
-                                    : 'border-surface-border hover:border-surface-muted'
-                                }`}
+                            autoComplete="email"
+                            aria-invalid={inputErrors.email || undefined}
+                            className={`auth-input ${inputErrors.email ? 'is-error' : ''}`}
                         />
-                        {inputErrors.email && (
-                            <span className="text-[11px] text-red-400 font-mono">Enter a valid email address</span>
-                        )}
                     </div>
+                    {inputErrors.email && (
+                        <span className="auth-error">Enter a valid email address</span>
+                    )}
+                </div>
 
-                    {/* Password */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
-                            Password
-                        </label>
-                        <div className="relative">
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                placeholder="Create a password"
-                                className={`w-full px-4 py-2.5 pr-11 rounded-xl text-sm bg-surface-raised text-chat-primary
-                                    placeholder:text-chat-ghost border outline-none
-                                    transition-colors duration-150
-                                    focus:border-brand focus:ring-2 focus:ring-brand/20
-                                    ${inputErrors.password
-                                        ? 'border-red-500 ring-2 ring-red-500/20'
-                                        : 'border-surface-border hover:border-surface-muted'
-                                    }`}
-                            />
-                            <EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
-                        </div>
-                        {inputErrors.password && (
-                            <span className="text-[11px] text-red-400 font-mono">Password is required</span>
-                        )}
+                {/* ── Password ── */}
+                <div className="auth-field">
+                    <label htmlFor="signup-password" className="auth-label">
+                        Password
+                    </label>
+                    <div className="auth-input-wrap">
+                        <span className="auth-icon">
+                            <FiLock size={16} aria-hidden="true" />
+                        </span>
+                        <input
+                            id="signup-password"
+                            type={showPassword ? 'text' : 'password'}
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            placeholder="Create a password"
+                            autoComplete="new-password"
+                            aria-invalid={inputErrors.password || undefined}
+                            className={`auth-input has-trailing ${inputErrors.password ? 'is-error' : ''}`}
+                        />
+                        <EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
                     </div>
+                    {inputErrors.password && (
+                        <span className="auth-error">Password is required</span>
+                    )}
+                </div>
 
-                    {/* Confirm Password */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-[11px] font-semibold text-chat-muted uppercase tracking-widest font-mono">
-                            Confirm Password
-                        </label>
-                        <div className="relative">
-                            <input
-                                type={showConfirmPassword ? 'text' : 'password'}
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                placeholder="Repeat your password"
-                                className={`w-full px-4 py-2.5 pr-11 rounded-xl text-sm bg-surface-raised text-chat-primary
-                                    placeholder:text-chat-ghost border outline-none
-                                    transition-colors duration-150
-                                    focus:border-brand focus:ring-2 focus:ring-brand/20
-                                    ${inputErrors.confirmPassword
-                                        ? 'border-red-500 ring-2 ring-red-500/20'
-                                        : 'border-surface-border hover:border-surface-muted'
-                                    }`}
-                            />
-                            <EyeToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />
-                        </div>
-                        {inputErrors.confirmPassword && (
-                            <span className="text-[11px] text-red-400 font-mono">
-                                {formData.confirmPassword ? 'Passwords do not match' : 'Please confirm your password'}
-                            </span>
-                        )}
+                {/* ── Confirm Password ── */}
+                <div className="auth-field">
+                    <label htmlFor="signup-confirm-password" className="auth-label">
+                        Confirm Password
+                    </label>
+                    <div className="auth-input-wrap">
+                        <span className="auth-icon">
+                            <FiLock size={16} aria-hidden="true" />
+                        </span>
+                        <input
+                            id="signup-confirm-password"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            placeholder="Repeat your password"
+                            autoComplete="new-password"
+                            aria-invalid={inputErrors.confirmPassword || undefined}
+                            className={`auth-input has-trailing ${inputErrors.confirmPassword ? 'is-error' : ''}`}
+                        />
+                        <EyeToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />
                     </div>
+                    {inputErrors.confirmPassword && (
+                        <span className="auth-error">
+                            {formData.confirmPassword ? 'Passwords do not match' : 'Please confirm your password'}
+                        </span>
+                    )}
+                </div>
 
-                    {/* Submit */}
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-2.5 rounded-xl text-sm font-semibold text-white
-                            bg-brand hover:bg-brand-dark
-                            disabled:opacity-60 disabled:cursor-not-allowed
-                            transition-colors duration-150
-                            flex items-center justify-center gap-2 mt-1"
-                    >
-                        {loading ? (
-                            <>
-                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                Creating account...
-                            </>
-                        ) : 'Create Account'}
-                    </button>
-
-                </form>
-            </div>
-
-            {/* ── Login link ── */}
-            <p className="mt-5 text-sm text-chat-faint">
-                Already have an account?{' '}
-                <NavLink
-                    to="/login"
-                    className="text-brand hover:text-chat-primary font-semibold no-underline transition-colors duration-150"
+                {/* ── Submit ── */}
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-primary auth-submit"
                 >
-                    Sign in
-                </NavLink>
-            </p>
+                    {loading ? (
+                        <>
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Creating account...
+                        </>
+                    ) : (
+                        <>
+                            Create Account
+                            <FiArrowRight size={16} aria-hidden="true" />
+                        </>
+                    )}
+                </button>
 
-        </section>
+            </form>
+        </AuthShell>
     );
 };
 

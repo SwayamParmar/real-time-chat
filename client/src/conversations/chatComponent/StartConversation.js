@@ -1,10 +1,30 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { FaSearch } from "react-icons/fa";
+import { FiSearch, FiUserX } from "react-icons/fi";
 import debounce from "lodash.debounce";
 import { useChatStore } from "../../store/chatStore";
 import { useAuthStore } from "../../store/authStore";
+import { useChatLayout } from "../ChatLayoutContext";
+import Modal from "../../components/ui/Modal";
+import EmptyState from "../../components/ui/EmptyState";
+import { ConversationSkeleton } from "../../components/ui/Skeleton";
+import { Avatar } from "../chatUtils";
 
-const StartConversation = ({ onClose, closePopup }) => {
+/* ─────────────────────────────────────────────────────────────
+   "New conversation" picker.
+
+   Selection logic is untouched: it still reuses an existing
+   conversation when there is one, otherwise calls
+   startConversation, then fetchMessages.
+
+   The chrome around it was a white card in a dark app, pinned to
+   a fixed 400px width (so it overflowed every phone), with a
+   Cancel button wired to a prop that was never passed. It now
+   uses the shared Modal, which docks to the bottom as a sheet on
+   phones and brings Escape, backdrop dismissal, focus handling
+   and dialog semantics with it.
+───────────────────────────────────────────────────────────── */
+
+const StartConversation = ({ onClose }) => {
     const {
         users,
         conversations,
@@ -15,8 +35,10 @@ const StartConversation = ({ onClose, closePopup }) => {
     } = useChatStore();
 
     const { user: currentUser } = useAuthStore();
+    const { openRoom } = useChatLayout();
 
     const [searchTerm, setSearchTerm] = useState("");
+    const [pendingId, setPendingId] = useState(null);
 
     // 🔥 Debounced search
     const debouncedSearch = useMemo(
@@ -27,8 +49,13 @@ const StartConversation = ({ onClose, closePopup }) => {
         []
     );
 
+    // Cancel any in-flight debounce on unmount, so a trailing call cannot
+    // set state on a dialog that has already closed.
+    useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
+
     useEffect(() => {
         fetchUsers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const filteredUsers = users
@@ -38,6 +65,9 @@ const StartConversation = ({ onClose, closePopup }) => {
         );
 
     const handleStartConversation = async (selectedUser) => {
+        if (pendingId) return;
+        setPendingId(selectedUser._id);
+
         // 🔥 Check if conversation already exists
         const existingConversation = conversations.find((conv) =>
             conv.participants.some(
@@ -55,59 +85,91 @@ const StartConversation = ({ onClose, closePopup }) => {
 
         if (conversationToOpen) {
             await fetchMessages(conversationToOpen._id);
+            openRoom();
             onClose?.();
+            return;
         }
+
+        setPendingId(null);
     };
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-            <div className="bg-white rounded-lg shadow-lg p-4 w-[400px]">
-
-                <div className="flex items-center border bg-[#e6ebf5] border-[#e6ebf5] rounded-lg p-2 mb-4">
-                    <FaSearch className="text-gray-500 ml-2 mr-4" />
+        <Modal
+            title="New conversation"
+            description="Pick someone to start chatting with."
+            onClose={onClose}
+        >
+            <div className="px-4 sm:px-5 pb-2">
+                <div className="relative">
+                    <label htmlFor="user-search" className="sr-only">
+                        Search users
+                    </label>
+                    <FiSearch
+                        aria-hidden="true"
+                        size={15}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-chat-faint pointer-events-none"
+                    />
                     <input
-                        type="text"
-                        placeholder="Search users"
+                        id="user-search"
+                        type="search"
+                        placeholder="Search people"
+                        autoComplete="off"
                         onChange={(e) => debouncedSearch(e.target.value)}
-                        className="flex-1 bg-transparent outline-none text-[#1F2937]"
+                        className="w-full h-11 bg-surface-raised border border-surface-border
+                                   rounded-xl pl-9 pr-3 text-chat-primary text-[15px]
+                                   placeholder:text-chat-faint
+                                   hover:border-surface-muted
+                                   focus:border-brand focus:ring-2 focus:ring-brand-muted
+                                   outline-none transition-colors duration-150
+                                   [&::-webkit-search-cancel-button]:hidden"
                     />
                 </div>
-
-                {loadingUsers ? (
-                    <div className="text-center text-lg">
-                        Loading users...
-                    </div>
-                ) : (
-                    <div className="max-h-[350px] overflow-y-auto">
-                        {filteredUsers.length > 0 ? (
-                            filteredUsers.map((u) => (
-                                <div
-                                    key={u._id}
-                                    className="flex items-center gap-4 p-2 cursor-pointer rounded-sm hover:bg-[#e8f0f8]"
-                                    onClick={() => handleStartConversation(u)}
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
-                                        {u.name[0]}
-                                    </div>
-                                    <p>{u.name}</p>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center text-lg">
-                                No users found
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <button
-                    onClick={closePopup}
-                    className="w-full bg-[#fd6254] text-white py-2 rounded-lg text-center font-semibold hover:bg-[#FF6F61] focus:outline-none mt-3 transition-all duration-300"
-                >
-                    Cancel
-                </button>
             </div>
-        </div>
+
+            {loadingUsers ? (
+                <ConversationSkeleton rows={5} />
+            ) : filteredUsers.length === 0 ? (
+                <EmptyState
+                    compact
+                    icon={FiUserX}
+                    title="No people found"
+                    description={
+                        searchTerm
+                            ? "Try a different name."
+                            : "There is nobody else here yet."
+                    }
+                />
+            ) : (
+                <ul className="list-none m-0 p-0 pb-2">
+                    {filteredUsers.map((u) => (
+                        <li key={u._id}>
+                            <button
+                                type="button"
+                                onClick={() => handleStartConversation(u)}
+                                disabled={Boolean(pendingId)}
+                                className="w-full flex items-center gap-3 px-4 sm:px-5 py-2.5 text-left
+                                           hover:bg-surface-raised active:bg-surface-muted
+                                           disabled:opacity-50
+                                           transition-colors duration-150"
+                            >
+                                <Avatar name={u.name} id={u._id} size="sm" />
+                                <span className="flex-1 min-w-0 text-chat-secondary text-[15px] font-medium truncate">
+                                    {u.name}
+                                </span>
+                                {pendingId === u._id && (
+                                    <span
+                                        role="status"
+                                        aria-label="Opening conversation"
+                                        className="w-4 h-4 flex-shrink-0 rounded-full animate-spin
+                                                   border-2 border-brand border-t-transparent"
+                                    />
+                                )}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </Modal>
     );
 };
 

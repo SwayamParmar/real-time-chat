@@ -6,6 +6,7 @@ import userRoutes from "./routes/user.routes";
 import conversationRoutes from "./routes/conversation.routes";
 import messageRoutes from "./routes/message.routes";
 import uploadRoutes from "./routes/upload-file.routes";
+import { env } from "./config/env";
 
 // // Middleware
 // import errorHandler from "./middleware/errorHandler";
@@ -16,7 +17,7 @@ const app = express();
  * Global Middlewares
  */
 app.use(express.json());
-app.use(cors());
+app.use(cors({origin: env.CLIENT_URL}));
 
 /**
  * API Routes
