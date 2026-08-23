@@ -1,18 +1,30 @@
-import { useState, useRef, useEffect } from "react";
-import { FiSmile, FiPaperclip, FiMic, FiSend, FiX, FiFileText, FiImage, FiCamera } from "react-icons/fi";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { FiPaperclip, FiSend, FiX, FiFileText, FiImage, FiCamera } from "react-icons/fi";
 import { useChatStore } from "../../store/chatStore";
+import IconButton from "../../components/ui/IconButton";
 
-const attachmentOptions = [
+/* ─────────────────────────────────────────────────────────────
+   Message composer.
+
+   Typing / edit / send behaviour is untouched: the same store
+   actions fire on the same events, Enter still sends. What
+   changed is the shell around them — a textarea that grows with
+   the message instead of a one-line input, real buttons instead
+   of bare <svg onClick>, and padding that clears the home
+   indicator when the keyboard is up.
+───────────────────────────────────────────────────────────── */
+
+const ATTACHMENT_OPTIONS = [
     {
         label: "Document",
         icon: FiFileText,
-        color: "bg-purple-500",
+        color: "bg-violet-500",
         accept: ".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx",
     },
     {
         label: "Photo & Video",
         icon: FiImage,
-        color: "bg-blue-500",
+        color: "bg-sky-500",
         accept: "image/*,video/*",
     },
     {
@@ -24,8 +36,11 @@ const attachmentOptions = [
     },
 ];
 
-// ✅ Attachment Dropdown — fixed positioning + smaller icons
-const AttachmentDropdown = ({ onFileSelect }) => {
+// Roughly six lines of text before the composer stops growing and scrolls.
+const MAX_COMPOSER_HEIGHT = 148;
+
+// ✅ Attachment menu — a popover on desktop, a bottom sheet on phones
+const AttachmentMenu = ({ onFileSelect }) => {
     const fileInputRef = useRef(null);
     const [activeAccept, setActiveAccept] = useState("");
     const [activeCapture, setActiveCapture] = useState(null);
@@ -41,8 +56,7 @@ const AttachmentDropdown = ({ onFileSelect }) => {
     };
 
     return (
-        // ✅ bottom-10 to sit just above paperclip, right-0 to align with it
-        <div className="absolute bottom-14 -left-5 z-30 animate-fade-in">
+        <>
             <input
                 ref={fileInputRef}
                 type="file"
@@ -50,6 +64,8 @@ const AttachmentDropdown = ({ onFileSelect }) => {
                 accept={activeAccept}
                 capture={activeCapture}
                 className="hidden"
+                tabIndex={-1}
+                aria-hidden="true"
                 onChange={(e) => {
                     const file = e.target.files?.[0]; // single file
                     if (file) onFileSelect(file);     // passes File object ✅
@@ -57,24 +73,35 @@ const AttachmentDropdown = ({ onFileSelect }) => {
                 }}
             />
 
-            {/* Dropdown card */}
-            <div className="bg-surface-panel border border-surface-muted rounded-xl 
-                            shadow-2xl flex flex-col gap-1 min-w-[180px]">
-                {attachmentOptions.map((option) => {
+            <div
+                role="menu"
+                aria-label="Attach"
+                className="
+                    z-30
+                    fixed inset-x-2 bottom-[calc(0.5rem+var(--safe-bottom))] animate-sheet-up
+                    sm:absolute sm:inset-x-auto sm:bottom-12 sm:left-0 sm:w-56 sm:animate-pop-in sm:origin-bottom-left
+                    bg-surface-panel border border-surface-border rounded-2xl shadow-panel
+                    p-1.5 flex flex-col gap-0.5
+                "
+            >
+                {ATTACHMENT_OPTIONS.map((option) => {
                     const Icon = option.icon;
                     return (
                         <button
                             key={option.label}
+                            type="button"
+                            role="menuitem"
                             onClick={() => handleOptionClick(option)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl
-                                       hover:bg-surface-raised transition-all duration-150
-                                       group w-full text-left"
+                            className="flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-xl w-full text-left
+                                       hover:bg-surface-raised active:bg-surface-muted
+                                       transition-colors duration-150 group"
                         >
-                            {/* ✅ smaller icon circle — match WhatsApp style */}
-                            <span className={`${option.color} w-9 h-9 rounded-full 
-                                             flex items-center justify-center shadow-sm 
-                                             group-hover:scale-105 transition-transform duration-150
-                                             flex-shrink-0`}>
+                            <span
+                                aria-hidden="true"
+                                className={`${option.color} w-9 h-9 rounded-full flex-shrink-0
+                                            flex items-center justify-center shadow-sm
+                                            group-hover:scale-105 transition-transform duration-150`}
+                            >
                                 <Icon size={17} className="text-white" />
                             </span>
                             <span className="text-chat-secondary text-sm font-medium">
@@ -84,15 +111,10 @@ const AttachmentDropdown = ({ onFileSelect }) => {
                     );
                 })}
             </div>
-
-            {/* ✅ Arrow pointing DOWN toward paperclip, aligned right */}
-            {/* <div className="flex justify-start pr-1.5">
-                <div className="w-3 h-3 bg-surface-panel border-r border-b 
-                                border-surface-muted rotate-45 -mt-1.5" />
-            </div> */}
-        </div>
+        </>
     );
 };
+
 const InputBar = ({ onSend, onFileSelect }) => {
     const {
         emitTyping,
@@ -109,16 +131,26 @@ const InputBar = ({ onSend, onFileSelect }) => {
     const [value, setValue] = useState("");
     const [showAttachment, setShowAttachment] = useState(false);
 
-    // ✅ Close on outside click
+    // ✅ Close on outside click / Escape
     useEffect(() => {
-        const handler = (e) => {
+        if (!showAttachment) return undefined;
+
+        const onPointerDown = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
                 setShowAttachment(false);
             }
         };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, []);
+        const onKeyDown = (e) => {
+            if (e.key === "Escape") setShowAttachment(false);
+        };
+
+        document.addEventListener("mousedown", onPointerDown);
+        document.addEventListener("keydown", onKeyDown);
+        return () => {
+            document.removeEventListener("mousedown", onPointerDown);
+            document.removeEventListener("keydown", onKeyDown);
+        };
+    }, [showAttachment]);
 
     // ✅ Pre-fill input when edit mode is triggered
     useEffect(() => {
@@ -129,6 +161,15 @@ const InputBar = ({ onSend, onFileSelect }) => {
             setValue("");
         }
     }, [editingMessage]);
+
+    // Auto-size the textarea to its content, before paint, so the composer
+    // never flashes at the wrong height as a message wraps onto a new line.
+    useLayoutEffect(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.style.height = "auto";
+        el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
+    }, [value]);
 
     const handleInputChange = (e) => {
         setValue(e.target.value);
@@ -152,6 +193,23 @@ const InputBar = ({ onSend, onFileSelect }) => {
         setValue("");
     };
 
+    const handleKeyDown = useCallback(
+        (e) => {
+            // Enter sends, as it always has. Shift+Enter is the escape hatch
+            // for a deliberate newline, which the old single-line input
+            // could not express at all.
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+            if (e.key === "Escape" && editingMessage) {
+                handleCancelEdit();
+            }
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [value, editingMessage]
+    );
+
     const handleCancelEdit = () => {
         clearEditingMessage();
         setValue("");
@@ -162,65 +220,84 @@ const InputBar = ({ onSend, onFileSelect }) => {
         onFileSelect?.([file]); // ✅ wrap in array — ConversationRoom expects array
     };
 
-    return (
-        <div className="px-4 py-3.5 bg-surface-panel border-t border-surface-border 
-                        flex flex-col gap-2 relative">
+    const canSend = value.trim().length > 0;
 
+    return (
+        <div
+            className="flex-shrink-0 bg-surface-panel border-t border-surface-border
+                       px-2 sm:px-4 pt-2.5
+                       pb-[max(0.625rem,var(--safe-bottom))]
+                       flex flex-col gap-2 relative"
+        >
             {/* ✅ Edit mode banner */}
             {editingMessage && (
-                <div className="flex items-center justify-between bg-surface-raised 
-                                px-3 py-1.5 rounded-lg text-xs text-chat-faint">
-                    <span>
+                <div
+                    className="flex items-center gap-2 bg-surface-raised border-l-2 border-brand
+                               pl-3 pr-1.5 py-1.5 rounded-lg text-xs text-chat-faint animate-fade-in"
+                >
+                    <span className="flex-1 min-w-0 truncate">
                         Editing:{" "}
                         <span className="text-chat-secondary font-medium">
                             {editingMessage.content}
                         </span>
                     </span>
-                    <button onClick={handleCancelEdit}>
-                        <FiX className="text-chat-faint hover:text-red-400" />
-                    </button>
+                    <IconButton
+                        label="Cancel editing"
+                        icon={FiX}
+                        iconSize={15}
+                        size="sm"
+                        variant="danger"
+                        onClick={handleCancelEdit}
+                    />
                 </div>
             )}
 
-            <div className="flex items-center gap-2">
-                <FiSmile className="text-chat-faint cursor-pointer hover:text-chat-secondary 
-                                    transition-colors" />
-
-                {/* ✅ Paperclip with dropdown */}
-                <div ref={dropdownRef} className="relative">
-                    <FiPaperclip
+            <div className="flex items-end gap-1.5 sm:gap-2">
+                {/* ✅ Attach */}
+                <div ref={dropdownRef} className="relative flex-shrink-0">
+                    <IconButton
+                        label={showAttachment ? "Close attachment menu" : "Attach a file"}
+                        icon={FiPaperclip}
+                        variant={showAttachment ? "active" : "ghost"}
+                        aria-expanded={showAttachment}
+                        aria-haspopup="menu"
                         onClick={() => setShowAttachment((p) => !p)}
-                        className={`transition-colors cursor-pointer duration-150 ${showAttachment
-                            ? "text-brand"
-                            : "text-chat-faint hover:text-chat-secondary"
-                            }`}
                     />
 
-                    {/* ✅ Dropdown with fade */}
-                    {showAttachment && (
-                        <AttachmentDropdown onFileSelect={handleFileSelect} />
-                    )}
+                    {showAttachment && <AttachmentMenu onFileSelect={handleFileSelect} />}
                 </div>
-                <input
+
+                <label htmlFor="composer" className="sr-only">
+                    {editingMessage ? "Edit message" : "Write a message"}
+                </label>
+                <textarea
+                    id="composer"
                     ref={inputRef}
+                    rows={1}
                     value={value}
                     onChange={handleInputChange}
-                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                    placeholder={editingMessage ? "Edit message..." : "Your message..."}
-                    className="flex-1 bg-surface-raised border text-chat-primary 
-                               border-surface-muted rounded-xl py-2.5 px-4 text-sm"
+                    onKeyDown={handleKeyDown}
+                    placeholder={editingMessage ? "Edit message…" : "Write a message…"}
+                    className="flex-1 min-w-0 resize-none min-h-[44px]
+                               bg-surface-raised border border-surface-border
+                               text-chat-primary placeholder:text-chat-faint
+                               rounded-2xl py-2.5 px-3.5 text-[15px] leading-[1.4]
+                               max-h-[148px] overflow-y-auto scroll-contain
+                               hover:border-surface-muted
+                               focus:border-brand focus:ring-2 focus:ring-brand-muted
+                               outline-none transition-colors duration-150"
                 />
 
-                <FiMic className="text-chat-faint cursor-pointer hover:text-chat-secondary 
-                                  transition-colors" />
-
-                <button
+                <IconButton
+                    label={editingMessage ? "Save edit" : "Send message"}
+                    icon={FiSend}
+                    iconSize={17}
+                    variant="primary"
+                    size="lg"
+                    disabled={!canSend}
                     onClick={handleSend}
-                    className="bg-brand text-white p-2 rounded-xl hover:opacity-90 
-                               transition-opacity"
-                >
-                    <FiSend />
-                </button>
+                    className="flex-shrink-0"
+                />
             </div>
         </div>
     );

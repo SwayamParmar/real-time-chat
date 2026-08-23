@@ -1,118 +1,192 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { FiGithub, FiMenu, FiX, FiArrowRight } from 'react-icons/fi';
 import TalkStreamLogo from '../components/TalkStreamLogo';
 
-const Header = () => {
-    const navRef = useRef(null);
-    const [scrolled, setScrolled] = useState(false);
+const NAV_ITEMS = [
+    { label: 'Features', href: '#features' },
+    { label: 'How It Works', href: '#how' },
+    { label: 'Tech Stack', href: '#tech' },
+    { label: 'Modules', href: '#modules' },
+    { label: 'FAQ', href: '#faq' },
+];
 
+const GITHUB_URL = 'https://github.com/SwayamParmar/real-time-chat';
+
+const Header = () => {
+    const [scrolled, setScrolled] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const scrolledRef = useRef(false);
+
+    // Passive listener, and state is only written when the boolean actually
+    // flips — so scrolling does not re-render the header on every frame.
     useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 40);
-        window.addEventListener('scroll', handleScroll);
+        const handleScroll = () => {
+            const next = window.scrollY > 40;
+            if (next === scrolledRef.current) return;
+            scrolledRef.current = next;
+            setScrolled(next);
+        };
+
+        handleScroll();
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const handleNavClick = (e, id) => {
+    // Lock body scroll while the mobile sheet is open.
+    useEffect(() => {
+        if (!menuOpen) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = previous;
+        };
+    }, [menuOpen]);
+
+    // Close the mobile sheet on Escape.
+    useEffect(() => {
+        if (!menuOpen) return;
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') setMenuOpen(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [menuOpen]);
+
+    const handleNavClick = useCallback((e, id) => {
         e.preventDefault();
+        setMenuOpen(false);
         const target = document.querySelector(id);
         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+    }, []);
 
     return (
-        <nav
-            ref={navRef}
-            className={`fixed top-0 left-0 right-0 z-[100] px-6 h-16 flex items-center
-                border-b backdrop-blur-xl transition-colors duration-300
-                bg-[rgba(13,15,22,0.72)]
-                ${scrolled ? 'border-[rgba(30,33,48,0.9)]' : 'border-[rgba(30,33,48,0.6)]'}`}
-        >
-            <div className="max-w-[1200px] mx-auto w-full flex items-center justify-between">
-                <TalkStreamLogo variant='text' />
+        <>
+            <nav
+                className={`fixed top-0 left-0 right-0 z-[100] h-16 flex items-center
+                    px-5 sm:px-6 border-b backdrop-blur-xl transition-colors duration-300`}
+                style={{
+                    background: 'rgba(11,13,20,0.72)',
+                    borderColor: scrolled ? 'rgba(31,35,51,0.95)' : 'rgba(31,35,51,0.5)',
+                }}
+            >
+                <div className="container-ts flex items-center justify-between gap-4">
+                    <TalkStreamLogo variant="text" />
 
-                {/* Nav Links */}
-                <ul className="flex items-center gap-[6px] list-none hide-sm">
-                    {[
-                        { label: 'Features', href: '#features' },
-                        { label: 'How It Works', href: '#how' },
-                        { label: 'Tech Stack', href: '#tech' },
-                        { label: 'Modules', href: '#modules' },
-                    ].map(({ label, href }) => (
-                        <li key={label}>
-                            <a
-                                href={href}
-                                onClick={(e) => handleNavClick(e, href)}
-                                className="text-[14px] font-medium px-[14px] py-[6px] rounded-lg transition-all duration-200 no-underline"
-                                style={{ color: 'var(--chat-muted)' }}
-                                onMouseEnter={e => {
-                                    e.currentTarget.style.color = 'var(--chat-primary)';
-                                    e.currentTarget.style.background = 'var(--surface-raised)';
-                                }}
-                                onMouseLeave={e => {
-                                    e.currentTarget.style.color = 'var(--chat-muted)';
-                                    e.currentTarget.style.background = 'transparent';
-                                }}
-                            >
-                                {label}
-                            </a>
-                        </li>
-                    ))}
+                    {/* ── Desktop nav ── */}
+                    <ul className="hidden lg:flex items-center gap-1 list-none m-0 p-0">
+                        {NAV_ITEMS.map(({ label, href }) => (
+                            <li key={label}>
+                                <a
+                                    href={href}
+                                    onClick={(e) => handleNavClick(e, href)}
+                                    className="nav-link"
+                                >
+                                    {label}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
 
-                    {/* GitHub */}
-                    <li>
+                    {/* ── Desktop actions ── */}
+                    <div className="hidden sm:flex items-center gap-2">
                         <a
-                            href="https://github.com/SwayamParmar/real-time-chat"
+                            href={GITHUB_URL}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[14px] font-medium px-[14px] py-[6px] rounded-lg transition-all duration-200 no-underline"
-                            style={{ color: 'var(--chat-muted)' }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.color = 'var(--chat-primary)';
-                                e.currentTarget.style.background = 'var(--surface-raised)';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.color = 'var(--chat-muted)';
-                                e.currentTarget.style.background = 'transparent';
-                            }}
+                            className="nav-link !flex items-center gap-2"
+                            aria-label="View source on GitHub"
                         >
-                            GitHub{' '}
-                            <span
-                                className="font-mono text-[9px] font-medium px-[5px] py-[1px] rounded-[4px] ml-1 align-middle tracking-[0.05em]"
-                                style={{
-                                    background: 'var(--brand-glow)',
-                                    border: '1px solid var(--brand-subtle)',
-                                    color: 'var(--brand)',
-                                }}
-                            >
-                                src
-                            </span>
+                            <FiGithub size={15} aria-hidden="true" />
+                            <span className="hidden md:inline">GitHub</span>
                         </a>
-                    </li>
 
-                    {/* CTA */}
-                    <li>
-                        <a
-                            href="/register"
-                            className="text-[13.5px] font-semibold px-[18px] py-[7px] rounded-[9px] text-white no-underline transition-all duration-200"
-                            style={{
-                                background: 'var(--brand)',
-                                boxShadow: '0 0 20px var(--brand-glow)',
-                            }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.background = 'var(--brand-dark)';
-                                e.currentTarget.style.boxShadow = '0 0 30px var(--brand-subtle)';
-                                e.currentTarget.style.transform = 'translateY(-1px)';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.background = 'var(--brand)';
-                                e.currentTarget.style.boxShadow = '0 0 20px var(--brand-glow)';
-                                e.currentTarget.style.transform = 'none';
-                            }}
+                        <Link to="/login" className="nav-link">
+                            Sign in
+                        </Link>
+
+                        <Link to="/register" className="btn btn-primary btn-sm">
+                            Get Started
+                            <FiArrowRight size={15} aria-hidden="true" />
+                        </Link>
+                    </div>
+
+                    {/* ── Mobile trigger ── */}
+                    <button
+                        type="button"
+                        onClick={() => setMenuOpen((open) => !open)}
+                        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                        aria-expanded={menuOpen}
+                        className="sm:hidden w-10 h-10 -mr-2 rounded-lg flex items-center justify-center transition-colors"
+                        style={{ color: 'var(--chat-secondary)' }}
+                    >
+                        {menuOpen ? <FiX size={21} /> : <FiMenu size={21} />}
+                    </button>
+                </div>
+            </nav>
+
+            {/* ── Mobile sheet ──
+                Previously every nav item (including the only call to action)
+                was hidden below 600px, leaving phones with no navigation. */}
+            {menuOpen && (
+                <div
+                    className="sm:hidden fixed inset-x-0 bottom-0 z-[99] overflow-y-auto px-5 pt-6 pb-10"
+                    style={{
+                        top: 'var(--header-h)',
+                        background: 'rgba(11,13,20,0.98)',
+                        backdropFilter: 'blur(16px)',
+                    }}
+                >
+                    <ul className="list-none m-0 p-0 flex flex-col gap-1">
+                        {NAV_ITEMS.map(({ label, href }) => (
+                            <li key={label}>
+                                <a
+                                    href={href}
+                                    onClick={(e) => handleNavClick(e, href)}
+                                    className="block px-4 py-3 rounded-xl text-[15px] font-medium no-underline"
+                                    style={{ color: 'var(--chat-secondary)' }}
+                                >
+                                    {label}
+                                </a>
+                            </li>
+                        ))}
+                        <li>
+                            <a
+                                href={GITHUB_URL}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={() => setMenuOpen(false)}
+                                className="flex items-center gap-2 px-4 py-3 rounded-xl text-[15px] font-medium no-underline"
+                                style={{ color: 'var(--chat-secondary)' }}
+                            >
+                                <FiGithub size={16} aria-hidden="true" />
+                                GitHub
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div className="hairline my-5" />
+
+                    <div className="flex flex-col gap-3">
+                        <Link
+                            to="/register"
+                            onClick={() => setMenuOpen(false)}
+                            className="btn btn-primary w-full"
                         >
-                            Open App →
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
+                            Create free account
+                            <FiArrowRight size={16} aria-hidden="true" />
+                        </Link>
+                        <Link
+                            to="/login"
+                            onClick={() => setMenuOpen(false)}
+                            className="btn btn-secondary w-full"
+                        >
+                            Sign in
+                        </Link>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

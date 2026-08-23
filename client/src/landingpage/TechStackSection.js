@@ -1,126 +1,153 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import {
+    FiLayout,
+    FiServer,
+    FiZap,
+    FiDatabase,
+    FiFeather,
+    FiCode,
+    FiKey,
+    FiCloud,
+    FiRepeat,
+    FiShuffle,
+} from 'react-icons/fi';
+import useReveal from './useReveal';
 
-const techStack = [
-    { logo: '⚛️', name: 'React', role: 'UI Framework' },
-    { logo: '🟢', name: 'Node.js', role: 'Runtime' },
-    { logo: '🔌', name: 'Socket.io', role: 'Real-Time Layer' },
-    { logo: '🍃', name: 'MongoDB', role: 'Database' },
-    { logo: '🎨', name: 'Tailwind', role: 'Styling' },
+/* Mirrors the stack described in the repository README. */
+const TECH = [
+    { Icon: FiLayout, name: 'React 18', role: 'UI Layer', tint: '#22D3EE' },
+    { Icon: FiServer, name: 'Node + Express', role: 'API Runtime', tint: '#34D399' },
+    { Icon: FiZap, name: 'Socket.IO', role: 'Real-Time', tint: '#6366F1' },
+    { Icon: FiDatabase, name: 'MongoDB', role: 'Persistence', tint: '#34D399' },
+    { Icon: FiCode, name: 'TypeScript', role: 'Typed Backend', tint: '#8B5CF6' },
+    { Icon: FiFeather, name: 'Tailwind CSS', role: 'Design System', tint: '#22D3EE' },
 ];
 
-const frontendItems = [
-    { icon: '⚛️', label: 'React + Next.js' },
-    { icon: '🎨', label: 'Tailwind CSS' },
-    { icon: '🔌', label: 'Socket.io Client' },
-    { icon: '🔑', label: 'JWT Storage' },
+const FRONTEND = [
+    { Icon: FiLayout, label: 'React 18 + React Router' },
+    { Icon: FiFeather, label: 'Tailwind CSS' },
+    { Icon: FiRepeat, label: 'Zustand state stores' },
+    { Icon: FiZap, label: 'Socket.IO client' },
 ];
 
-const backendItems = [
-    { icon: '🟢', label: 'Node.js + Express' },
-    { icon: '🔌', label: 'Socket.io Server' },
-    { icon: '🍃', label: 'MongoDB Atlas' },
-    { icon: '🛡️', label: 'JWT Middleware' },
+const BACKEND = [
+    { Icon: FiServer, label: 'Express on Node (TypeScript)' },
+    { Icon: FiZap, label: 'Socket.IO server' },
+    { Icon: FiDatabase, label: 'MongoDB + Mongoose' },
+    { Icon: FiKey, label: 'JWT middleware' },
+    { Icon: FiCloud, label: 'Cloudinary + Multer' },
 ];
 
-const TechCard = ({ logo, name, role }) => (
-    <div
-        className="rounded-[14px] p-7 text-center transition-all duration-250 cursor-default"
-        style={{ background: 'var(--surface-panel)', border: '1px solid var(--surface-border)' }}
-        onMouseEnter={e => {
-            e.currentTarget.style.borderColor = 'var(--brand-subtle)';
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.3), 0 0 0 1px var(--brand-glow)';
-        }}
-        onMouseLeave={e => {
-            e.currentTarget.style.borderColor = 'var(--surface-border)';
-            e.currentTarget.style.transform = 'none';
-            e.currentTarget.style.boxShadow = 'none';
-        }}
-    >
-        <span className="block text-[32px] mb-3">{logo}</span>
-        <div className="font-syne font-bold text-[13px] mb-1" style={{ color: 'var(--chat-primary)' }}>{name}</div>
-        <div className="font-mono text-[11px]" style={{ color: 'var(--chat-faint)' }}>{role}</div>
+const TechCard = ({ Icon, name, role, tint }) => (
+    <div className="card card-lift p-6 text-center">
+        <span
+            className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3"
+            style={{ background: `${tint}1A`, color: tint }}
+        >
+            <Icon size={22} aria-hidden="true" />
+        </span>
+        <div className="font-display font-bold text-[13.5px] mb-1" style={{ color: 'var(--chat-primary)' }}>
+            {name}
+        </div>
+        <div className="font-mono text-[11px]" style={{ color: 'var(--chat-faint)' }}>
+            {role}
+        </div>
     </div>
 );
 
-const ArchItem = ({ icon, label }) => (
+const ArchItem = ({ Icon, label }) => (
     <div
         className="flex items-center gap-[10px] px-[14px] py-[10px] rounded-[10px] mb-2 text-[13px]"
-        style={{ background: 'var(--surface-raised)', border: '1px solid var(--surface-border)', color: 'var(--chat-secondary)' }}
+        style={{
+            background: 'var(--surface-raised)',
+            border: '1px solid var(--surface-border)',
+            color: 'var(--chat-secondary)',
+        }}
     >
-        <span className="text-[16px]">{icon}</span>
+        <Icon size={15} style={{ color: 'var(--brand)', flexShrink: 0 }} aria-hidden="true" />
         {label}
     </div>
 );
 
-const TechStackSection = () => {
-    const sectionRef = useRef(null);
-    const archRef = useRef(null);
+const ArchColumn = ({ title, items }) => (
+    <div>
+        <div
+            className="font-mono text-[11px] uppercase tracking-[0.1em] mb-4"
+            style={{ color: 'var(--brand)' }}
+        >
+            {title}
+        </div>
+        {items.map((i) => (
+            <ArchItem key={i.label} {...i} />
+        ))}
+    </div>
+);
 
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-            { threshold: 0.1 }
-        );
-        if (sectionRef.current) observer.observe(sectionRef.current);
-        if (archRef.current) observer.observe(archRef.current);
-        return () => observer.disconnect();
-    }, []);
+const TechStackSection = () => {
+    const revealCards = useReveal();
+    const revealArch = useReveal();
 
     return (
-        <section id="tech" className="py-[100px] px-6 overflow-hidden" style={{ background: 'var(--surface-base)' }}>
-            <div className="max-w-[1200px] mx-auto">
-                {/* Label */}
-                <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] mb-4"
-                    style={{ color: 'var(--brand)' }}>
-                    <span className="inline-block w-[18px] h-px" style={{ background: 'var(--brand)' }} />
-                    Tech Stack
-                </div>
+        <section id="tech" className="section overflow-hidden" style={{ background: 'var(--surface-base)' }}>
+            <div className="container-ts">
+                <header className="section-head">
+                    <span className="eyebrow">Tech Stack</span>
+                    <h2 className="section-title">
+                        Production-grade stack.
+                        <br className="hidden sm:block" /> Zero compromises.
+                    </h2>
+                    <p className="section-sub">
+                        Each layer was picked for a reason: a typed backend that fails at compile time,
+                        a socket layer that keeps state in sync, and a database shaped around conversations.
+                    </p>
+                </header>
 
-                <h2 className="font-syne font-extrabold tracking-[-0.03em] leading-[1.1] mb-4"
-                    style={{ fontSize: 'clamp(28px, 4vw, 44px)', color: 'var(--chat-primary)' }}>
-                    Production-grade stack.<br />Zero compromises.
-                </h2>
-
-                <p className="text-[16px] leading-[1.7] mb-[60px]"
-                    style={{ color: 'var(--chat-muted)', maxWidth: 520 }}>
-                    Every technology chosen deliberately for performance, developer experience, and scalability.
-                </p>
-
-                {/* Tech cards */}
-                <div ref={sectionRef} className="reveal grid grid-cols-5 gap-4 mb-12">
-                    {techStack.map(t => <TechCard key={t.name} {...t} />)}
-                </div>
-
-                {/* Architecture diagram */}
+                {/* Stack cards */}
                 <div
-                    ref={archRef}
-                    className="reveal rounded-[16px] p-8 grid grid-cols-3 gap-6 items-center"
-                    style={{ background: 'var(--surface-panel)', border: '1px solid var(--surface-border)' }}
+                    ref={revealCards}
+                    className="reveal grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-10 sm:mb-12"
                 >
-                    {/* Frontend */}
-                    <div>
-                        <div className="arch-col-title">Frontend</div>
-                        {frontendItems.map(i => <ArchItem key={i.label} {...i} />)}
-                    </div>
+                    {TECH.map((t) => (
+                        <TechCard key={t.name} {...t} />
+                    ))}
+                </div>
 
-                    {/* Middle — WebSocket */}
-                    <div className="flex flex-col items-center gap-1">
-                        <div className="text-[20px] anim-arrow-pulse" style={{ color: 'var(--brand)' }}>⇄</div>
+                {/* Architecture diagram — stacks vertically on small screens */}
+                <div
+                    ref={revealArch}
+                    className="reveal card p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 lg:gap-8 items-center"
+                >
+                    <ArchColumn title="Frontend" items={FRONTEND} />
+
+                    {/* Transport */}
+                    <div className="flex lg:flex-col items-center justify-center gap-2">
+                        <FiShuffle
+                            size={18}
+                            className="anim-arrow lg:rotate-90"
+                            style={{ color: 'var(--brand)' }}
+                            aria-hidden="true"
+                        />
                         <div
-                            className="font-mono text-[11.5px] font-medium text-center px-4 py-[10px] rounded-[10px]"
-                            style={{ background: 'var(--brand-glow)', border: '1px solid var(--brand-subtle)', color: 'var(--brand)' }}
+                            className="font-mono text-[11.5px] font-medium text-center px-4 py-[10px] rounded-[10px] leading-snug"
+                            style={{
+                                background: 'var(--brand-soft)',
+                                border: '1px solid var(--brand-subtle)',
+                                color: 'var(--brand)',
+                            }}
                         >
-                            WebSocket<br />Socket.io
+                            WebSocket
+                            <br />
+                            Socket.IO
                         </div>
-                        <div className="text-[20px] anim-arrow-pulse" style={{ color: 'var(--brand)' }}>⇄</div>
+                        <FiShuffle
+                            size={18}
+                            className="anim-arrow lg:rotate-90"
+                            style={{ color: 'var(--brand)' }}
+                            aria-hidden="true"
+                        />
                     </div>
 
-                    {/* Backend */}
-                    <div>
-                        <div className="arch-col-title">Backend</div>
-                        {backendItems.map(i => <ArchItem key={i.label} {...i} />)}
-                    </div>
+                    <ArchColumn title="Backend" items={BACKEND} />
                 </div>
             </div>
         </section>

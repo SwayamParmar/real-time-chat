@@ -1,80 +1,73 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { FiArrowRight, FiGithub, FiZap } from 'react-icons/fi';
+import useReveal from './useReveal';
 
 const CTASection = () => {
-    const innerRef = useRef(null);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-            { threshold: 0.2 }
-        );
-        if (innerRef.current) observer.observe(innerRef.current);
-        return () => observer.disconnect();
-    }, []);
+    const reveal = useReveal();
 
     return (
         <section
             id="cta"
-            className="relative text-center overflow-hidden py-[120px] px-6"
+            className="section relative text-center overflow-hidden"
             style={{ background: 'var(--surface-base)' }}
         >
-            {/* Radial glow */}
+            {/* Decorative background */}
             <div
                 className="absolute inset-0 pointer-events-none"
-                style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(124,111,205,0.1) 0%, transparent 70%)' }}
+                aria-hidden="true"
+                style={{
+                    background:
+                        'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(99,102,241,0.12) 0%, transparent 70%)',
+                }}
             />
+            <div className="grid-bg grid-bg-bottom" aria-hidden="true" />
 
-            {/* Grid lines */}
-            <div className="cta-grid-bg absolute inset-0 pointer-events-none" />
-
-            {/* Content */}
-            <div ref={innerRef} className="reveal relative z-[1] max-w-[680px] mx-auto">
-                {/* Badge */}
-                <div
-                    className="inline-flex items-center gap-[6px] font-mono text-[12px] font-medium px-[14px] py-[5px] rounded-full mb-6"
-                    style={{ background: 'var(--brand-glow)', border: '1px solid var(--brand-subtle)', color: 'var(--brand)' }}
-                >
-                    ⚡ Fully open-source
+            <div ref={reveal} className="reveal relative z-[1] max-w-[680px] mx-auto">
+                <div className="pill pill-brand mb-6">
+                    <FiZap size={12} aria-hidden="true" />
+                    Fully open-source
                 </div>
 
-                {/* Headline */}
                 <h2
-                    className="font-syne font-extrabold tracking-[-0.03em] leading-[1.08] mb-4"
-                    style={{ fontSize: 'clamp(32px, 5vw, 56px)', color: 'var(--chat-primary)' }}
+                    className="font-display font-extrabold tracking-[-0.03em] leading-[1.08] mb-4"
+                    style={{ fontSize: 'clamp(30px, 5.2vw, 54px)', color: 'var(--chat-primary)', textWrap: 'balance' }}
                 >
-                    Ready to see<br />
-                    <span className="grad-text">TalkStream</span> in action?
+                    Start a conversation
+                    <br />
+                    on <span className="grad-text">TalkStream</span>.
                 </h2>
 
-                {/* Sub */}
-                <p className="text-[16px] leading-[1.7] mb-10" style={{ color: 'var(--chat-muted)' }}>
-                    Explore the live demo, dive into the source code, or reach out to discuss the
-                    engineering decisions behind each module.
+                <p
+                    className="text-[16px] leading-[1.7] mb-9 mx-auto max-w-[520px]"
+                    style={{ color: 'var(--chat-muted)', textWrap: 'pretty' }}
+                >
+                    Create an account in seconds, or dig into the source to see how every module —
+                    presence, receipts, uploads — is put together.
                 </p>
 
-                {/* Buttons */}
-                <div className="flex justify-center gap-[14px] flex-wrap">
-                    <a
-                        href="#"
-                        className="inline-flex items-center gap-2 text-white font-semibold text-[14.5px] px-6 py-3 rounded-[10px] no-underline transition-all duration-200"
-                        style={{ background: 'var(--brand)', boxShadow: '0 0 30px rgba(124,111,205,0.3), 0 4px 12px rgba(0,0,0,0.3)' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--brand-dark)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--brand)'; e.currentTarget.style.transform = 'none'; }}
-                    >
-                        ▶ Open Live Demo
-                    </a>
+                <div className="flex justify-center gap-3 flex-wrap">
+                    <Link to="/register" className="btn btn-primary">
+                        Create free account
+                        <FiArrowRight size={16} aria-hidden="true" />
+                    </Link>
                     <a
                         href="https://github.com/SwayamParmar/real-time-chat"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 font-medium text-[14.5px] px-6 py-3 rounded-[10px] no-underline transition-all duration-200"
-                        style={{ color: 'var(--chat-secondary)', border: '1px solid var(--surface-border)', background: 'transparent' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--surface-muted)'; e.currentTarget.style.background = 'var(--surface-raised)'; e.currentTarget.style.color = 'var(--chat-primary)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--surface-border)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--chat-secondary)'; }}
+                        className="btn btn-secondary"
                     >
-                        ⌥ View on GitHub
+                        <FiGithub size={16} aria-hidden="true" />
+                        View on GitHub
                     </a>
                 </div>
+
+                <p className="text-[13px] mt-6" style={{ color: 'var(--chat-faint)' }}>
+                    Already have an account?{' '}
+                    <Link to="/login" className="font-semibold no-underline" style={{ color: 'var(--brand)' }}>
+                        Sign in
+                    </Link>
+                </p>
             </div>
         </section>
     );
