@@ -47,7 +47,7 @@ const ConversationRow = ({ conv, otherUser, isActive, isOnline, isTyping, onOpen
                 <span className="flex-1 min-w-0 flex flex-col gap-0.5">
                     <span className="flex items-baseline justify-between gap-2">
                         <span
-                            className={`truncate text-[14.5px] tracking-tight
+                            className={`truncate text-[13.5px] sm:text-[14.5px] tracking-tight
                                 ${unread ? "text-chat-primary font-bold" : "text-chat-secondary font-semibold"}`}
                         >
                             {otherUser?.name || "Unknown"}
@@ -56,7 +56,7 @@ const ConversationRow = ({ conv, otherUser, isActive, isOnline, isTyping, onOpen
                         {timestamp && (
                             <time
                                 dateTime={timestamp}
-                                className={`text-[11px] flex-shrink-0 tabular-nums
+                                className={`text-[10.5px] sm:text-[11px] flex-shrink-0 tabular-nums
                                     ${unread ? "text-brand font-semibold" : "text-chat-ghost"}`}
                             >
                                 {formatTimestampOnList(timestamp)}
@@ -66,7 +66,7 @@ const ConversationRow = ({ conv, otherUser, isActive, isOnline, isTyping, onOpen
 
                     <span className="flex items-center justify-between gap-2">
                         <span
-                            className={`flex items-center gap-1 min-w-0 text-[13px]
+                            className={`flex items-center gap-1 min-w-0 text-[12px] sm:text-[13px]
                                 ${unread ? "text-chat-muted" : "text-chat-faint"}`}
                         >
                             {isTyping ? (

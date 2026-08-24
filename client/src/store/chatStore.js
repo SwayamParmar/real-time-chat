@@ -20,6 +20,20 @@ export const useChatStore = create((set, get) => ({
     editingMessage: null,
     pendingUploads: {}, // { tempId: { file, progress, conversationId, caption } }
 
+    /*
+     * Last known messages per conversation, so re-opening one paints instantly
+     * instead of waiting on the network. Purely a rendering shortcut: the
+     * request still goes out every time and its response is authoritative, so
+     * a cache entry can never be the reason something is out of date.
+     *
+     * Written only when leaving a conversation (see fetchMessages), which
+     * snapshots whatever is on screen at that moment — socket updates
+     * included. That keeps every real-time handler below untouched.
+     *
+     * In memory only: never persisted, and cleared by reset() on sign-out.
+     */
+    messagesByConversation: {}, // { conversationId: Message[] }
+
     // INIT SOCKET
     initSocket: () => {
         if (get().socketInitialized) return;
@@ -74,20 +88,42 @@ export const useChatStore = create((set, get) => ({
                 }
             }
 
+            /*
+             * Move the conversation to the top of the list with its new last
+             * message.
+             *
+             * Matched on the normalised msgConvId. This block used to compare
+             * the raw message.conversationId, which the rest of the handler
+             * already knew could arrive either as a plain id or as a populated
+             * object — so a populated payload matched nothing here.
+             *
+             * A miss also used to be silently destructive: find() returned
+             * undefined and it was spread in as the first element, putting a
+             * hole in the list that the renderer would then crash on. That is
+             * reachable now that a message can arrive for a conversation the
+             * recipient has never opened.
+             */
             set((state) => {
-                const updated = state.conversations.map((conv) =>
-                    conv._id === message.conversationId
-                        ? { ...conv, lastMessage: message }
-                        : conv
-                );
+                const existing = state.conversations.find((conv) => conv._id === msgConvId);
+                if (!existing) return state;
 
-                const sorted = [
-                    updated.find(c => c._id === message.conversationId),
-                    ...updated.filter(c => c._id !== message.conversationId),
-                ];
-
-                return { conversations: sorted };
+                return {
+                    conversations: [
+                        { ...existing, lastMessage: message },
+                        ...state.conversations.filter((conv) => conv._id !== msgConvId),
+                    ],
+                };
             });
+
+            /*
+             * First message of a conversation the recipient does not have yet:
+             * there is no local record to reorder, so pull the list. Only
+             * reachable for a genuinely unknown conversation, which is the
+             * moment someone starts a new chat with you.
+             */
+            if (msgConvId && !get().conversations.some((conv) => conv._id === msgConvId)) {
+                get().fetchConversations();
+            }
         });
 
         socket.on("userTyping", ({ conversationId }) => {
@@ -269,7 +305,6 @@ export const useChatStore = create((set, get) => ({
     // FETCH MESSAGES (Pagination)
     fetchMessages: async (conversationId, page = 1) => {
         const token = useAuthStore.getState().token;
-        set({ loadingMessages: true });
 
         // Leave previous room, join new one
         const socket = getSocket();
@@ -279,37 +314,129 @@ export const useChatStore = create((set, get) => ({
         }
         socket?.emit("joinConversation", conversationId);
 
-        const res = await fetch(
-            `${config.API_BASE_URL}/messages/${conversationId}?page=${page}&limit=${PAGE_SIZE}`, {
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-        }
-        );
-        const data = await res.json();
+        /*
+         * Re-selecting the conversation that is already open is a no-op.
+         *
+         * Every caller used to run straight through to the network, so each
+         * extra click on the active row refired the request — and, since a
+         * page-1 load clears `messages` first, visibly blanked a thread that
+         * was already correct. Its messages are kept live by the socket, so
+         * refetching would only replace an up-to-date list with an identical
+         * one.
+         *
+         * The guard sits *after* the room join above, so re-selecting still
+         * re-asserts socket membership — the one useful side effect of the
+         * old behaviour is kept.
+         *
+         * Deliberately not skipped when the conversation is active but has no
+         * messages and nothing is in flight: that is what a failed request
+         * leaves behind, and retrying by tapping the row again should work.
+         */
+        const reselectingOpenConversation =
+            page === 1 &&
+            prevConvId === conversationId &&
+            (get().loadingMessages || get().messages.length > 0);
 
-        // 3s delay for testing loading state visibility — remove later
-        if (page > 1) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
+        if (reselectingOpenConversation) return;
 
-        // This gives React time to paint messages before scroll restore fires
-        set((state) => ({
-            messages: page === 1 ? data.messages : [...data.messages, ...state.messages],
-            activeConversationId: conversationId,
-            page,
-            hasMore: data.messages.length === PAGE_SIZE,
-        }));
-
+        /*
+         * Mark the conversation active BEFORE awaiting the network.
+         *
+         * The room pane is derived from activeConversationId, so setting it
+         * only once the response landed meant the entire round trip was spent
+         * showing "No conversation selected" — the skeleton could not even
+         * render, because the room had not mounted yet. Opening a conversation
+         * now paints its header, composer and skeleton on the next frame and
+         * fills in the messages when they arrive.
+         *
+         * Page 1 also drops the previous conversation's messages, which
+         * otherwise sat under the new header until the fetch resolved.
+         */
         if (page === 1) {
-            get().markAsRead(conversationId);
+            const state = get();
+
+            /*
+             * Snapshot the conversation being left. Capped to one page: the
+             * revalidation below replaces messages with the newest page, so
+             * caching more would show extra history for a moment and then have
+             * it vanish when the response lands.
+             */
+            const outgoing =
+                prevConvId && prevConvId !== conversationId && state.messages.length
+                    ? { [prevConvId]: state.messages.slice(-PAGE_SIZE) }
+                    : null;
+
+            // Stale: show what we already have. Revalidate: the fetch below
+            // still runs and overwrites this with the server's version.
+            const cached = state.messagesByConversation[conversationId];
+
+            set({
+                activeConversationId: conversationId,
+                messages: cached ?? [],
+                page: 1,
+                hasMore: true,
+                // Kept true even when serving from cache, so the auto-pagination
+                // effect cannot fire a page-2 request that the in-flight page-1
+                // revalidation would then throw away. The room shows no spinner
+                // for it — see ConversationRoom — so the refresh is silent.
+                loadingMessages: true,
+                ...(outgoing
+                    ? { messagesByConversation: { ...state.messagesByConversation, ...outgoing } }
+                    : null),
+            });
+        } else {
+            set({ loadingMessages: true });
         }
 
-        // Small tick to let DOM update before marking loading done
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        set({ loadingMessages: false });
+        /*
+         * Wrapped so a failed request cannot strand loadingMessages at true.
+         * That matters more than it used to: activeConversationId is set
+         * before the await, so a stuck flag combined with the guard above
+         * would make the conversation permanently unopenable. Matches the
+         * error handling fetchConversations and fetchUsers already use.
+         */
+        try {
+            const res = await fetch(
+                `${config.API_BASE_URL}/messages/${conversationId}?page=${page}&limit=${PAGE_SIZE}`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+            );
+            const data = await res.json();
+
+            /*
+             * Switching conversations is instant now, so two opens can easily
+             * be in flight at once. Drop a response whose conversation is no
+             * longer the one on screen, rather than letting the slower request
+             * overwrite the newer one's messages.
+             */
+            if (get().activeConversationId !== conversationId) return;
+
+            set((state) => ({
+                messages: page === 1 ? data.messages : [...data.messages, ...state.messages],
+                activeConversationId: conversationId,
+                page,
+                hasMore: data.messages.length === PAGE_SIZE,
+            }));
+
+            if (page === 1) {
+                get().markAsRead(conversationId);
+            }
+
+            // Small tick to let DOM update before marking loading done
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+        } catch (error) {
+            console.error("Fetch messages error:", error);
+        } finally {
+            // Only for the conversation still on screen: a stale response must
+            // not clear the newer one's loading state.
+            if (get().activeConversationId === conversationId) {
+                set({ loadingMessages: false });
+            }
+        }
     },
 
     loadMoreMessages: async () => {
@@ -472,4 +599,30 @@ export const useChatStore = create((set, get) => ({
             }
         });
     },
+
+    // Drop every trace of the signed-in session. Called on logout.
+    //
+    // socketInitialized is the important one: initSocket() short-circuits on
+    // it, so without a reset the next sign-in would attach no listeners at all
+    // and the app would look connected while receiving nothing.
+    reset: () => set({
+        conversations: [],
+        users: [],
+        messages: [],
+        activeConversationId: null,
+        loadingConversations: false,
+        loadingMessages: false,
+        loadingUsers: false,
+        onlineUsers: [],
+        page: 1,
+        hasMore: true,
+        socketInitialized: false,
+        unreadCounts: {},
+        typingUsers: {},
+        editingMessage: null,
+        pendingUploads: {},
+        // Must be cleared with the rest: otherwise one account's messages
+        // would still be in memory for whoever signs in next on this tab.
+        messagesByConversation: {},
+    }),
 }));

@@ -1,6 +1,5 @@
 import { LogoMark } from "../components/TalkStreamLogo";
-import { Avatar } from "./chatUtils";
-import { useAuthStore } from "../store/authStore";
+import ProfileMenu from "./chatComponent/ProfileMenu";
 
 /* ─────────────────────────────────────────────────────────────
    Left nav rail — desktop only.
@@ -37,8 +36,6 @@ const Tooltip = ({ children }) => (
 );
 
 const ConversationNav = ({ activeTab = "chats", onTabChange }) => {
-    const { user } = useAuthStore();
-
     return (
         <nav
             aria-label="Primary"
@@ -105,17 +102,10 @@ const ConversationNav = ({ activeTab = "chats", onTabChange }) => {
                     <Tooltip>Settings — coming soon</Tooltip>
                 </button>
 
-                {/* My profile avatar */}
-                <button
-                    type="button"
-                    aria-label={user?.name ? `Signed in as ${user.name}` : "My profile"}
-                    disabled
-                    className="relative rounded-full mt-1 group
-                               disabled:opacity-100 disabled:pointer-events-none"
-                >
-                    <Avatar name={user?.name} id={user?.id} size="xs" />
-                    <Tooltip>{user?.name || "My profile"}</Tooltip>
-                </button>
+                {/* My profile — opens the account menu (sign out lives here) */}
+                <div className="mt-1">
+                    <ProfileMenu placement="rail" />
+                </div>
             </div>
         </nav>
     );

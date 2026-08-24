@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FiX } from "react-icons/fi";
 import IconButton from "./IconButton";
@@ -61,6 +61,40 @@ const Modal = ({ open = true, onClose, title, description, children, footer }) =
         [onClose]
     );
 
+    /*
+     * Mobile keyboards resize the *visual* viewport, not the layout viewport.
+     * A position:fixed sheet therefore keeps its full height and its lower half
+     * — including whatever the user just focused — ends up behind the keyboard.
+     * Pinning the overlay to the visual viewport makes the sheet ride up with
+     * the keyboard the way a native bottom sheet does.
+     */
+    const [viewport, setViewport] = useState(null);
+
+    useEffect(() => {
+        if (!open) return undefined;
+
+        const vv = window.visualViewport;
+        if (!vv) return undefined; // Falls back to the full-viewport overlay.
+
+        let frame = 0;
+        const sync = () => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() =>
+                setViewport({ top: vv.offsetTop, height: vv.height })
+            );
+        };
+
+        sync();
+        vv.addEventListener("resize", sync);
+        vv.addEventListener("scroll", sync);
+
+        return () => {
+            cancelAnimationFrame(frame);
+            vv.removeEventListener("resize", sync);
+            vv.removeEventListener("scroll", sync);
+        };
+    }, [open]);
+
     useEffect(() => {
         if (!open) return undefined;
 
@@ -83,7 +117,9 @@ const Modal = ({ open = true, onClose, title, description, children, footer }) =
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center
+            style={viewport ? { top: viewport.top, height: viewport.height } : undefined}
+            className="fixed left-0 right-0 top-0 h-full z-[200]
+                       flex items-end sm:items-center justify-center
                        bg-black/70 backdrop-blur-sm animate-fade-in
                        p-0 sm:p-6"
             // Backdrop click. The check keeps clicks that originate inside the
@@ -100,10 +136,13 @@ const Modal = ({ open = true, onClose, title, description, children, footer }) =
                 aria-describedby={description ? descId : undefined}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
+                // max-h-full rather than a dvh value: the overlay is already
+                // sized to the visual viewport above, so the sheet shrinks with
+                // the keyboard instead of extending behind it.
                 className="w-full sm:max-w-[440px] flex flex-col outline-none
                            bg-surface-panel border border-surface-border
                            rounded-t-2xl sm:rounded-2xl shadow-panel
-                           max-h-[88dvh] sm:max-h-[min(620px,85dvh)]
+                           max-h-full sm:max-h-[min(620px,85dvh)]
                            animate-sheet-up sm:animate-pop-in
                            pb-safe-b sm:pb-0"
             >

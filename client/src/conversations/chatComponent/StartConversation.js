@@ -24,6 +24,14 @@ import { Avatar } from "../chatUtils";
    and dialog semantics with it.
 ───────────────────────────────────────────────────────────── */
 
+/*
+ * The list scrolls once it passes seven people, on phones and desktop alike.
+ * The row height is fixed so that cut-off lands on a row boundary rather than
+ * mid-row: 40px avatar + 2 × 10px vertical padding.
+ */
+const MAX_VISIBLE_USERS = 7;
+const USER_ROW_HEIGHT = 60;
+
 const StartConversation = ({ onClose }) => {
     const {
         users,
@@ -119,7 +127,7 @@ const StartConversation = ({ onClose }) => {
                                    rounded-xl pl-9 pr-3 text-chat-primary text-[15px]
                                    placeholder:text-chat-faint
                                    hover:border-surface-muted
-                                   focus:border-brand focus:ring-2 focus:ring-brand-muted
+                                   focus:border-brand-subtle
                                    outline-none transition-colors duration-150
                                    [&::-webkit-search-cancel-button]:hidden"
                     />
@@ -140,20 +148,24 @@ const StartConversation = ({ onClose }) => {
                     }
                 />
             ) : (
-                <ul className="list-none m-0 p-0 pb-2">
+                <ul
+                    className="list-none m-0 p-0 overflow-y-auto scroll-contain"
+                    style={{ maxHeight: MAX_VISIBLE_USERS * USER_ROW_HEIGHT }}
+                >
                     {filteredUsers.map((u) => (
                         <li key={u._id}>
                             <button
                                 type="button"
                                 onClick={() => handleStartConversation(u)}
                                 disabled={Boolean(pendingId)}
-                                className="w-full flex items-center gap-3 px-4 sm:px-5 py-2.5 text-left
+                                style={{ height: USER_ROW_HEIGHT }}
+                                className="w-full flex items-center gap-3 px-4 sm:px-5 text-left
                                            hover:bg-surface-raised active:bg-surface-muted
                                            disabled:opacity-50
                                            transition-colors duration-150"
                             >
                                 <Avatar name={u.name} id={u._id} size="sm" />
-                                <span className="flex-1 min-w-0 text-chat-secondary text-[15px] font-medium truncate">
+                                <span className="flex-1 min-w-0 text-chat-secondary text-[14px] sm:text-[15px] font-medium truncate">
                                     {u.name}
                                 </span>
                                 {pendingId === u._id && (
