@@ -48,4 +48,9 @@ router.post("/login", [
     userController.login,
 );
 
+/**
+ * User Logout
+ */
+router.post("/logout", authMiddleware, userController.logout);
+
 export default router;

@@ -313,7 +313,7 @@ const FilePreviewModal = ({ files, onClose, onSend }) => {
                                text-chat-primary placeholder:text-chat-faint
                                rounded-2xl px-4 text-[15px] outline-none
                                hover:border-surface-muted
-                               focus:border-brand focus:ring-2 focus:ring-brand-muted
+                               focus:border-brand-subtle
                                transition-colors duration-150"
                 />
                 <IconButton
