@@ -9,8 +9,8 @@ const GITHUB_URL = 'https://github.com/SwayamParmar/real-time-chat';
 // deploying — they are intentionally left generic rather than guessed.
 const SOCIAL = [
     { Icon: FiGithub, label: 'GitHub', href: GITHUB_URL, external: true },
-    { Icon: FiLinkedin, label: 'LinkedIn', href: 'https://www.linkedin.com/', external: true },
-    { Icon: FiMail, label: 'Email', href: 'mailto:you@example.com', external: false },
+    { Icon: FiLinkedin, label: 'LinkedIn', href: 'https://www.linkedin.com/in/swayam-parmar-988a45214', external: true },
+    { Icon: FiMail, label: 'Email', href: 'mailto:swayam.parmar@example.com', external: false },
 ];
 
 /* Column links: in-page anchors keep the smooth-scroll behaviour, while
