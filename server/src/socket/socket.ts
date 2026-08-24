@@ -180,7 +180,35 @@ export const initSocket = (server: HttpServer): void => {
                     file,
                 });
 
-                io.to(conversationId).emit("receiveMessage", {
+                /*
+                 * Deliver to the conversation room AND to each participant's
+                 * personal room.
+                 *
+                 * A socket only joins `conversationId` when that chat is
+                 * actually opened (see joinConversation), so emitting to the
+                 * conversation room alone reached nobody who was sitting on
+                 * their conversation list — their list could not update until
+                 * a refetch. The `user:<id>` rooms are joined on connect and
+                 * are already how messagesDelivered / messagesSeen /
+                 * messageEdited / messageDeleted reach a user wherever they
+                 * are; receiveMessage was the outlier.
+                 *
+                 * Socket.IO delivers once per socket across a union of rooms,
+                 * so a participant who does have the chat open — and is
+                 * therefore in both rooms — still receives exactly one event.
+                 */
+                const conversation = await Conversation.findById(conversationId)
+                    .select("participants")
+                    .lean();
+
+                const rooms = [
+                    conversationId,
+                    ...(conversation?.participants ?? []).map(
+                        (participantId) => `user:${participantId.toString()}`
+                    ),
+                ];
+
+                io.to(rooms).emit("receiveMessage", {
                     ...message.toObject(),
                     tempId,
                 });

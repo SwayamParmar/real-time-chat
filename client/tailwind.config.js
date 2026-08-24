@@ -91,10 +91,12 @@ const config = {
 
       borderRadius: {
         // Bubble corners: rounded on three sides, tucked on the tail side.
-        "bubble-me": "18px 18px 6px 18px",
-        "bubble-them": "18px 18px 18px 6px",
-        "bubble-mid-me": "18px 6px 6px 18px",
-        "bubble-mid-them": "6px 18px 18px 6px",
+        // Kept at 10px — enough to read as a bubble, tight enough that a long
+        // thread does not look like a column of pills.
+        "bubble-me": "10px 10px 3px 10px",
+        "bubble-them": "10px 10px 10px 3px",
+        "bubble-mid-me": "10px 3px 3px 10px",
+        "bubble-mid-them": "3px 10px 10px 3px",
       },
 
       fontFamily: {

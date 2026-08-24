@@ -39,9 +39,9 @@ const formatFileSize = (bytes) => {
 
 // ─── Date separator ───────────────────────────────────────────
 const DateSeparator = ({ value }) => (
-    <div className="flex items-center justify-center my-3 first:mt-0">
+    <div className="flex items-center justify-center my-2 first:mt-0">
         <span
-            className="px-3 py-1 rounded-full text-[11px] font-medium tracking-wide
+            className="px-2.5 py-[3px] rounded-full text-[10.5px] sm:text-[11px] font-medium tracking-wide
                        bg-surface-raised/80 border border-surface-border text-chat-faint
                        backdrop-blur-sm"
         >
@@ -56,7 +56,7 @@ const DeliveryTicks = ({ msg }) => {
     if (msg.seenBy?.length > 1) {
         return (
             <BsCheckAll
-                size={16}
+                size={14}
                 className="inline ml-0.5 flex-shrink-0 text-sky-300"
                 role="img"
                 aria-label="Seen"
@@ -68,7 +68,7 @@ const DeliveryTicks = ({ msg }) => {
     if (msg.deliveredTo?.length > 0) {
         return (
             <BsCheckAll
-                size={16}
+                size={14}
                 className="inline ml-0.5 flex-shrink-0 opacity-80"
                 role="img"
                 aria-label="Delivered"
@@ -79,7 +79,7 @@ const DeliveryTicks = ({ msg }) => {
     // Single tick — sent only
     return (
         <BsCheck
-            size={16}
+            size={14}
             className="inline ml-0.5 flex-shrink-0 opacity-80"
             role="img"
             aria-label="Sent"
@@ -88,7 +88,7 @@ const DeliveryTicks = ({ msg }) => {
 };
 
 // ─── Message actions (edit / delete) ──────────────────────────
-const MessageActions = ({ msg, onEdit, onDelete }) => {
+const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
     const [open, setOpen] = useState(false);
     const wrapRef = useRef(null);
 
@@ -111,10 +111,10 @@ const MessageActions = ({ msg, onEdit, onDelete }) => {
     }, [open]);
 
     return (
-        // A flex sibling of the bubble rather than an overlay on top of it.
-        // Overlaid, it covered the last word of every short outgoing message —
-        // permanently on touch, where there is no hover to hide it behind.
-        <div ref={wrapRef} className="relative flex-shrink-0 self-center">
+        // Beside the bubble rather than over it. Overlaid, it covered the last
+        // word of every short outgoing message — permanently on touch, where
+        // there is no hover to hide it behind.
+        <div ref={wrapRef} className={`flex-shrink-0 ${className}`}>
             <button
                 type="button"
                 onClick={() => setOpen((p) => !p)}
@@ -183,12 +183,12 @@ const MessageActions = ({ msg, onEdit, onDelete }) => {
 };
 
 // ─── Message bubble ───────────────────────────────────────────
-const MessageBubble = memo(({ msg, isMe, isGroupStart, isGroupEnd, onEdit, onDelete }) => {
+const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete }) => {
     // ✅ Deleted placeholder
     if (msg.isDeleted) {
         return (
-            <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${isGroupEnd ? "mb-2" : "mb-0.5"}`}>
-                <div className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] rounded-2xl bg-surface-raised text-chat-faint italic border border-surface-border">
+            <div className={`flex ${isMe ? "justify-end" : "justify-start"} ${isGroupEnd ? "mb-1.5" : "mb-[2px]"}`}>
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] sm:text-[13px] rounded-[10px] bg-surface-raised text-chat-faint italic border border-surface-border">
                     <IoBan aria-hidden="true" size={15} className="flex-shrink-0" />
                     This message was deleted
                 </div>
@@ -205,30 +205,66 @@ const MessageBubble = memo(({ msg, isMe, isGroupStart, isGroupEnd, onEdit, onDel
             : "rounded-bubble-mid-them";
 
     const hasMedia = Boolean(msg.file?.url) && msg.messageType !== "text";
+    const isFileCard = msg.messageType === "file" && Boolean(msg.file?.url);
+
+    /*
+     * Picture and video with no caption have no text line for the timestamp to
+     * share, so it floats over the bottom-right corner on a small scrim.
+     *
+     * A file card is deliberately excluded: it is opaque and already has text
+     * in that corner (the size), which the scrim would land straight on top
+     * of. It reserves room in its own last line instead — see below.
+     */
+    const metaOverMedia = hasMedia && !isFileCard && !msg.content;
+
+    /*
+     * Horizontal room reserved at the end of the last text line for the
+     * timestamp, which is absolutely positioned into it. This is what keeps a
+     * short message one line tall instead of two: the meta shares the final
+     * line when it fits and drops to its own only when the text runs long.
+     */
+    const metaWidth = 55 + (isMe ? 14 : 0) + (msg.isEdited ? 34 : 0);
 
     return (
         <div
-            className={`flex group items-end gap-1 ${isMe ? "justify-end" : "justify-start"} ${isGroupEnd ? "mb-2" : "mb-0.5"} ${isGroupStart ? "mt-1" : ""}`}
+            className={`flex group ${isMe ? "justify-end" : "justify-start"}
+                        ${isGroupEnd ? "mb-1.5" : "mb-[2px]"}`}
         >
-            {/* Sits before the bubble in the flex row, so an outgoing message
-                gets its actions on the outside edge. */}
-            {isMe && <MessageActions msg={msg} onEdit={onEdit} onDelete={onDelete} />}
-
-            {/* relative lives here so the upload/failure overlays actually
-                anchor to the bubble — they used to be absolutely positioned
-                against whatever ancestor happened to be positioned. */}
+            {/* min-w-0 so a long unbroken word shrinks the bubble rather than
+                widening the row. */}
             <div
-                className={`
-                    relative min-w-0 max-w-[85%] xs:max-w-[80%] sm:max-w-[72%] lg:max-w-[560px]
-                    text-[14.5px] leading-[1.45] ${radius}
-                    ${hasMedia ? "p-1" : "px-3.5 py-2"}
+                className={`relative min-w-0
+                            ${isMe
+                        ? "max-w-[80%] sm:max-w-[72%] lg:max-w-[560px]"
+                        : "max-w-[85%] sm:max-w-[72%] lg:max-w-[560px]"
+                    }`}
+            >
+                {/* Absolutely positioned, not a flex sibling: at 44px tall on
+                    touch it was setting the height of every outgoing row,
+                    leaving a one-word message in a 44px slot. */}
+                {isMe && (
+                    <MessageActions
+                        msg={msg}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        className="absolute right-full top-1/2 -translate-y-1/2"
+                    />
+                )}
+
+                {/* relative lives here so the upload/failure overlays actually
+                    anchor to the bubble — they used to be absolutely positioned
+                    against whatever ancestor happened to be positioned. */}
+                <div
+                    className={`
+                    relative text-[13.5px] sm:text-[14.5px] leading-[1.32] ${radius}
+                    ${hasMedia ? "p-[3px]" : "px-2.5 py-[5px]"}
                     ${isMe ? "bg-brand text-white" : "bg-surface-raised text-chat-secondary"}
                 `}
-            >
+                >
 
                 {/* ✅ Image message */}
                 {msg.messageType === "image" && msg.file?.url && (
-                    <div className="relative overflow-hidden rounded-[14px]">
+                    <div className="relative overflow-hidden rounded-[7px]">
                         <img
                             src={msg.file.url}
                             alt={msg.file.name || "Shared image"}
@@ -268,7 +304,7 @@ const MessageBubble = memo(({ msg, isMe, isGroupStart, isGroupEnd, onEdit, onDel
                         // Only the poster frame is fetched until the user plays,
                         // so a scrollback full of clips is not a download storm.
                         preload="metadata"
-                        className="block max-w-full max-h-[min(340px,50dvh)] rounded-[14px]"
+                        className="block max-w-full max-h-[min(340px,50dvh)] rounded-[7px]"
                     />
                 )}
 
@@ -278,7 +314,7 @@ const MessageBubble = memo(({ msg, isMe, isGroupStart, isGroupEnd, onEdit, onDel
                         type="button"
                         disabled={msg.uploading}
                         onClick={() => window.open(msg.file?.url, "_blank", "noopener")}
-                        className={`flex items-center gap-3 p-2.5 rounded-[14px] w-full text-left
+                        className={`flex items-center gap-3 p-2.5 rounded-[7px] w-full text-left
                                     bg-black/15 transition-colors
                                     ${msg.uploading ? "cursor-default" : "hover:bg-black/25"}`}
                     >
@@ -301,30 +337,39 @@ const MessageBubble = memo(({ msg, isMe, isGroupStart, isGroupEnd, onEdit, onDel
                     </button>
                 )}
 
-                {/* ✅ Caption or text content */}
-                {msg.content && (
-                    <p className={`wrap-anywhere whitespace-pre-wrap m-0 ${hasMedia ? "px-2.5 pt-1.5" : ""}`}>
-                        {msg.content}
-                    </p>
-                )}
+                    {/* ✅ Caption or text content */}
+                    {msg.content && (
+                        <p className={`wrap-anywhere whitespace-pre-wrap m-0 ${hasMedia ? "px-1.5 pt-1" : ""}`}>
+                            {msg.content}
+                            {/* Holds open the tail of the last line for the
+                                timestamp below. Zero height, so it can never
+                                add a line of its own. */}
+                            <span
+                                aria-hidden="true"
+                                className="inline-block h-0 align-bottom"
+                                style={{ width: metaWidth }}
+                            />
+                        </p>
+                    )}
 
-                {/* Meta line — normally only on the last bubble of a run, so a
-                    burst of messages is not five repetitions of the same
-                    minute. An edited message always shows its own line though:
-                    "edited" is a fact about that message, not about the run,
-                    and suppressing it would quietly drop information. */}
-                {(isGroupEnd || msg.isEdited) && (
+                    {/* Timestamp — tucked into the bottom-right of the bubble,
+                        sharing the last text line rather than occupying a row
+                        of its own. */}
                     <span
-                        className={`flex items-center justify-end gap-0.5 text-[10.5px] opacity-70 mt-0.5
-                                    ${hasMedia ? "px-2.5 pb-1" : ""}`}
+                        className={`absolute flex items-center gap-0.5 leading-none select-none
+                                    text-[10px] tracking-tight
+                                    ${metaOverMedia
+                                ? "bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-black/45 text-white"
+                                : "bottom-[3px] right-2 opacity-70"
+                            }`}
                     >
-                        {msg.isEdited && <span className="mr-1 italic">edited</span>}
+                        {msg.isEdited && <span className="italic mr-0.5">edited</span>}
                         <time dateTime={msg.createdAt} className="tabular-nums">
                             {formatTimestampOnWindow(msg.createdAt)}
                         </time>
                         {isMe && <DeliveryTicks msg={msg} />}
                     </span>
-                )}
+                </div>
             </div>
         </div>
     );
@@ -340,6 +385,7 @@ const ConversationRoom = ({ conversation }) => {
         loadMoreMessages,
         hasMore,
         loadingMessages,
+        page,
         typingUsers,
         activeConversationId,
         setEditingMessage,
@@ -456,13 +502,9 @@ const ConversationRoom = ({ conversation }) => {
 
             const showDate = !prev || dayKeyOf(prev) !== day;
 
-            const continuesPrev =
-                !showDate &&
-                prev?.sender?._id === msg.sender?._id &&
-                !prev?.isDeleted &&
-                !msg.isDeleted &&
-                withinWindow(prev, msg);
-
+            // Only the *end* of a run needs marking: it carries the wider
+            // bottom margin and the rounded tail corner, which together are
+            // what separate one run from the next.
             const continuesIntoNext =
                 next &&
                 dayKeyOf(next) === day &&
@@ -474,7 +516,6 @@ const ConversationRoom = ({ conversation }) => {
             return {
                 msg,
                 showDate,
-                isGroupStart: !continuesPrev,
                 isGroupEnd: !continuesIntoNext,
             };
         });
@@ -521,15 +562,24 @@ const ConversationRoom = ({ conversation }) => {
                     ref={scrollRef}
                     onScroll={handleScroll}
                     className="h-full overflow-y-auto scroll-contain
-                               px-3 sm:px-5 lg:px-6 pt-4 pb-3 flex flex-col"
+                               px-2 sm:px-4 pt-2 pb-1.5 flex flex-col"
                 >
                     {isFirstLoad ? (
                         <MessageSkeleton />
                     ) : (
                         <>
-                            {/* Pagination spinner sits above the older messages
-                                it is fetching, not over the whole thread. */}
-                            {loadingMessages && <Loading width={20} height={20} />}
+                            {/*
+                              * Pagination spinner sits above the older messages
+                              * it is fetching, not over the whole thread.
+                              *
+                              * Gated on page > 1 so it means exactly one thing:
+                              * "fetching older messages". A re-opened
+                              * conversation revalidates its cached page in the
+                              * background, and inserting a spinner above an
+                              * already-scrolled thread would shove it down and
+                              * back for no reason.
+                              */}
+                            {loadingMessages && page > 1 && <Loading width={20} height={20} label="Loading older messages" />}
 
                             {messages.length === 0 && (
                                 <div className="flex-1 flex items-center justify-center">
@@ -541,13 +591,12 @@ const ConversationRoom = ({ conversation }) => {
                                 </div>
                             )}
 
-                            {rendered.map(({ msg, showDate, isGroupStart, isGroupEnd }) => (
+                            {rendered.map(({ msg, showDate, isGroupEnd }) => (
                                 <div key={msg._id}>
                                     {showDate && <DateSeparator value={msg.createdAt} />}
                                     <MessageBubble
                                         msg={msg}
                                         isMe={msg.sender?._id === user.id}
-                                        isGroupStart={isGroupStart}
                                         isGroupEnd={isGroupEnd}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}

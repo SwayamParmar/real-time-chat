@@ -191,6 +191,14 @@ const InputBar = ({ onSend, onFileSelect }) => {
             onSend(value.trim());
         }
         setValue("");
+
+        /*
+         * Keep the composer focused so the on-screen keyboard stays up for the
+         * next message, the way a native messaging app behaves. Emptying the
+         * field flips the send button to disabled, and a browser blurs a
+         * newly-disabled element — which closed the keyboard mid-conversation.
+         */
+        inputRef.current?.focus();
     };
 
     const handleKeyDown = useCallback(
@@ -284,7 +292,7 @@ const InputBar = ({ onSend, onFileSelect }) => {
                                rounded-2xl py-2.5 px-3.5 text-[15px] leading-[1.4]
                                max-h-[148px] overflow-y-auto scroll-contain
                                hover:border-surface-muted
-                               focus:border-brand focus:ring-2 focus:ring-brand-muted
+                               focus:border-brand-subtle
                                outline-none transition-colors duration-150"
                 />
 
@@ -296,6 +304,10 @@ const InputBar = ({ onSend, onFileSelect }) => {
                     size="lg"
                     disabled={!canSend}
                     onClick={handleSend}
+                    // Suppressing the default mousedown stops the button from
+                    // taking focus off the textarea. On touch that is what
+                    // dismissed the keyboard the instant a message was sent.
+                    onMouseDown={(e) => e.preventDefault()}
                     className="flex-shrink-0"
                 />
             </div>

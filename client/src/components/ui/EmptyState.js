@@ -25,11 +25,11 @@ const EmptyState = ({ icon: Icon, title, description, action, compact = false })
         )}
 
         <div className="max-w-[280px]">
-            <p className={`text-chat-secondary font-semibold ${compact ? "text-[13px]" : "text-[15px]"}`}>
+            <p className={`text-chat-secondary font-semibold ${compact ? "text-[12.5px] sm:text-[13px]" : "text-[14px] sm:text-[15px]"}`}>
                 {title}
             </p>
             {description && (
-                <p className="text-chat-faint text-[13px] leading-relaxed mt-1">
+                <p className="text-chat-faint text-[12px] sm:text-[13px] leading-relaxed mt-1">
                     {description}
                 </p>
             )}
