@@ -57,13 +57,13 @@ const ConversationRoomHeader = ({ user }) => {
                 <Avatar name={user?.name} id={user?._id} size="sm" online={isOnline} />
 
                 <div className="min-w-0">
-                    <p className="text-chat-primary font-semibold text-[14.5px] tracking-tight truncate m-0">
+                    <p className="text-chat-primary font-semibold text-[13.5px] sm:text-[14.5px] tracking-tight truncate m-0">
                         {user?.name}
                     </p>
 
                     {/* One line, three states — kept at a fixed size so the
                         header never reflows as presence changes. */}
-                    <p className="text-[12px] leading-tight truncate m-0 mt-0.5">
+                    <p className="text-[11px] sm:text-[12px] leading-tight truncate m-0 mt-0.5">
                         {isTyping ? (
                             <span className="text-brand-highlight font-medium">typing…</span>
                         ) : isOnline ? (

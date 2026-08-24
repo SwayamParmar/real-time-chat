@@ -3,6 +3,7 @@ import { FiEdit, FiSearch, FiX } from "react-icons/fi";
 import StartConversation from "./StartConversation";
 import IconButton from "../../components/ui/IconButton";
 import { LogoMark } from "../../components/TalkStreamLogo";
+import ProfileMenu from "./ProfileMenu";
 
 /* ─────────────────────────────────────────────────────────────
    Conversation-list header: brand, new-chat action, search.
@@ -31,19 +32,29 @@ const ConversationListHeader = ({ search, onSearchChange }) => {
                     <div className="flex items-center gap-2.5 min-w-0">
                         {/* The nav rail carries the mark on desktop; on phones
                             the rail is hidden, so the list header carries it. */}
-                        <LogoMark className="md:hidden h-7 flex-shrink-0" />
-                        <h1 className="text-chat-primary font-bold text-[17px] tracking-tight m-0 truncate">
+                        <span className="md:hidden flex-shrink-0">
+                            <LogoMark className="h-7" />
+                        </span>
+                        <h1 className="text-chat-primary font-bold text-[15px] sm:text-[17px] tracking-tight m-0 truncate">
                             Messages
                         </h1>
                     </div>
 
-                    <IconButton
-                        label="New conversation"
-                        icon={FiEdit}
-                        iconSize={17}
-                        variant="active"
-                        onClick={() => setShowModal(true)}
-                    />
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <IconButton
+                            label="New conversation"
+                            icon={FiEdit}
+                            iconSize={16}
+                            variant="active"
+                            chip
+                            onClick={() => setShowModal(true)}
+                        />
+
+                        {/* The nav rail carries this on desktop. */}
+                        <span className="md:hidden">
+                            <ProfileMenu placement="header" />
+                        </span>
+                    </div>
                 </div>
 
                 {/* Search */}
@@ -68,7 +79,7 @@ const ConversationListHeader = ({ search, onSearchChange }) => {
                                    rounded-xl pl-9 pr-9 text-chat-primary text-sm
                                    placeholder:text-chat-faint
                                    hover:border-surface-muted
-                                   focus:border-brand focus:ring-2 focus:ring-brand-muted
+                                   focus:border-brand-subtle
                                    outline-none transition-colors duration-150
                                    [&::-webkit-search-cancel-button]:hidden"
                     />
