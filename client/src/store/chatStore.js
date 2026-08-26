@@ -45,6 +45,7 @@ export const useChatStore = create((set, get) => ({
 
         socket.off("receiveMessage");
         socket.off("onlineUsers");
+        socket.off("presenceUpdate");
         socket.off("userTyping");
         socket.off("userStopTyping");
         socket.off("messageEdited");
@@ -141,30 +142,63 @@ export const useChatStore = create((set, get) => ({
         });
 
         socket.on("messageEdited", (updatedMessage) => {
+            const editedConvId =
+                updatedMessage.conversationId?._id?.toString() ||
+                updatedMessage.conversationId?.toString();
+
             set((state) => ({
                 messages: state.messages.map((m) =>
                     m._id === updatedMessage._id ? updatedMessage : m
                 ),
+                // Editing the newest message changes what the list previews.
+                // This handler only touched `messages` before, so the row kept
+                // showing the pre-edit text until the next full refetch.
+                conversations: state.conversations.map((conv) =>
+                    conv.lastMessage?._id === updatedMessage._id
+                        ? { ...conv, lastMessage: updatedMessage }
+                        : conv
+                ),
+                messagesByConversation: state.messagesByConversation[editedConvId]
+                    ? {
+                          ...state.messagesByConversation,
+                          [editedConvId]: state.messagesByConversation[editedConvId].map((m) =>
+                              m._id === updatedMessage._id ? updatedMessage : m
+                          ),
+                      }
+                    : state.messagesByConversation,
             }));
         });
 
-        socket.on("messageDeleted", ({ messageId, conversationId }) => {
+        /*
+         * `lastMessage` on the payload is the conversation's authoritative
+         * preview *after* the delete — the previous surviving message, or null
+         * when that was the only one. It used to be derived locally by marking
+         * the existing lastMessage isDeleted, which left the row stuck on a
+         * message that no longer exists.
+         */
+        socket.on("messageDeleted", ({ messageId, conversationId, lastMessage }) => {
             set((state) => ({
                 // ✅ update messages list
                 messages: state.messages.map((m) =>
                     m._id === messageId ? { ...m, isDeleted: true } : m
                 ),
                 // ✅ update lastMessage in conversation list
-                conversations: state.conversations.map((conv) => {
-                    if (conv._id !== conversationId) return conv;
-                    const isLastMessage = conv.lastMessage?._id === messageId;
-                    return {
-                        ...conv,
-                        lastMessage: isLastMessage
-                            ? { ...conv.lastMessage, isDeleted: true }
-                            : conv.lastMessage,
-                    };
-                }),
+                conversations: state.conversations.map((conv) =>
+                    conv._id === conversationId
+                        ? { ...conv, lastMessage: lastMessage ?? null }
+                        : conv
+                ),
+                // The cached copy of this conversation has to move with the
+                // live list, or re-opening the chat would paint the message
+                // back as undeleted until the fetch returns.
+                messagesByConversation: state.messagesByConversation[conversationId]
+                    ? {
+                          ...state.messagesByConversation,
+                          [conversationId]: state.messagesByConversation[conversationId].map((m) =>
+                              m._id === messageId ? { ...m, isDeleted: true } : m
+                          ),
+                      }
+                    : state.messagesByConversation,
             }));
         });
 
@@ -179,6 +213,33 @@ export const useChatStore = create((set, get) => ({
                         is_online: onlineUserIds.includes(p._id) ? 1 : 0,
                     })),
                 })),
+            }));
+        });
+
+        /*
+         * Per-user presence transition. The roster above answers "who is
+         * online" but carries no timestamp, so `lastSeen` stayed frozen at
+         * whatever fetchConversations happened to load and the room header
+         * showed a stale — or missing — "Last seen". This carries it.
+         */
+        socket.on("presenceUpdate", ({ userId, isOnline, lastSeen }) => {
+            set((state) => ({
+                onlineUsers: isOnline
+                    ? state.onlineUsers.includes(userId)
+                        ? state.onlineUsers
+                        : [...state.onlineUsers, userId]
+                    : state.onlineUsers.filter((id) => id !== userId),
+                conversations: state.conversations.map((conv) => ({
+                    ...conv,
+                    participants: conv.participants.map((p) =>
+                        p._id === userId
+                            ? { ...p, is_online: isOnline ? 1 : 0, lastSeen }
+                            : p
+                    ),
+                })),
+                users: state.users.map((u) =>
+                    u._id === userId ? { ...u, is_online: isOnline ? 1 : 0, lastSeen } : u
+                ),
             }));
         });
 
@@ -221,6 +282,20 @@ export const useChatStore = create((set, get) => ({
             const activeConvId = get().activeConversationId;
             if (activeConvId) {
                 socket.emit("leaveConversation", activeConvId);
+            }
+        });
+
+        /*
+         * A reconnect is a brand-new server-side socket: it is put back into
+         * `user:<id>` automatically, but every conversation room it had joined
+         * is gone. Without this, typing indicators and read receipts silently
+         * stopped working after any transport blip.
+         */
+        socket.on("connect", () => {
+            const activeConvId = get().activeConversationId;
+            if (activeConvId) {
+                socket.emit("joinConversation", activeConvId);
+                socket.emit("markAsRead", { conversationId: activeConvId });
             }
         });
     },
@@ -375,6 +450,15 @@ export const useChatStore = create((set, get) => ({
                 messages: cached ?? [],
                 page: 1,
                 hasMore: true,
+                /*
+                 * An unfinished edit does not survive leaving the conversation
+                 * it belongs to. It is global store state, so it used to: the
+                 * composer in the *next* conversation stayed in edit mode, and
+                 * pressing send there edited the old message instead of
+                 * sending a new one — silently, since nothing about the new
+                 * conversation changed on screen.
+                 */
+                ...(prevConvId !== conversationId ? { editingMessage: null } : null),
                 // Kept true even when serving from cache, so the auto-pagination
                 // effect cannot fire a page-2 request that the in-flight page-1
                 // revalidation would then throw away. The room shows no spinner

@@ -8,8 +8,8 @@ import messageRoutes from "./routes/message.routes";
 import uploadRoutes from "./routes/upload-file.routes";
 import { env } from "./config/env";
 
-// // Middleware
-// import errorHandler from "./middleware/errorHandler";
+// Middleware
+import errorHandler from "./middleware/error-handler.middleware";
 
 const app = express();
 
@@ -31,6 +31,6 @@ app.use("/api/upload", uploadRoutes);
  * Global Error Handler
  * (Must always be the last middleware)
  */
-// app.use(errorHandler);
+app.use(errorHandler);
 
 export default app;

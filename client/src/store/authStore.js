@@ -46,14 +46,23 @@ export const useAuthStore = create((set, get) => ({
         const { token } = get();
 
         /*
-         * Tell the server first, while the token is still being sent, so it can
-         * clear the presence record — otherwise the account keeps reading as
-         * "online" to everyone else until the JWT expires or the socket happens
-         * to drop on its own.
+         * Drop the socket first. It emits `presenceLogout`, which decrements
+         * this account's socket ref count server-side and skips the reconnect
+         * grace period — so by the time the REST call lands, the presence
+         * record already reflects reality (still online if another tab is
+         * open, offline if this was the last one).
+         */
+        disconnectSocket();
+
+        /*
+         * Then tell the server, while the token is still being sent, so it can
+         * clear the presence record for the case where no socket was ever
+         * connected — otherwise the account keeps reading as "online" until
+         * the JWT expires.
          *
          * A failure here must never strand someone in a signed-in UI they can't
          * leave, so the local teardown below runs either way.
-         */
+         */ 
         if (token) {
             try {
                 await fetch(`${config.API_BASE_URL}/user/logout`, {
@@ -69,7 +78,6 @@ export const useAuthStore = create((set, get) => ({
             }
         }
 
-        disconnectSocket();
         localStorage.clear();
         set({ token: null, user: null });
     },

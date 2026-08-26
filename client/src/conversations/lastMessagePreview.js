@@ -13,7 +13,9 @@ import { HiMiniPhoto, HiVideoCamera, HiDocument } from "react-icons/hi2";
  * @returns {{ icon: import('react').ComponentType | null, text: string }}
  */
 export const lastMessagePreview = (message) => {
-    if (!message) return { icon: null, text: "" };
+    // No message at all: a conversation that was just started, or one whose
+    // only message has since been deleted. Both used to render a blank line.
+    if (!message) return { icon: null, text: "No messages" };
 
     switch (message.messageType) {
         case "image":

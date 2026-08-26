@@ -24,6 +24,7 @@ import {
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { IoBan } from "react-icons/io5";
 import FilePreviewModal from "./chatComponent/FilePreviewModal";
+import ImageLightbox from "./chatComponent/ImageLightbox";
 import { FaFileAlt } from "react-icons/fa";
 
 // Consecutive messages from the same person inside this window are drawn as
@@ -183,7 +184,7 @@ const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
 };
 
 // ─── Message bubble ───────────────────────────────────────────
-const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete }) => {
+const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete, onViewImage }) => {
     // ✅ Deleted placeholder
     if (msg.isDeleted) {
         return (
@@ -272,7 +273,18 @@ const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete }) => {
                             decoding="async"
                             className={`block w-auto max-w-full max-h-[min(340px,50dvh)] object-cover
                                         ${msg.uploading ? "opacity-50 blur-[1px]" : "cursor-pointer"}`}
-                            onClick={() => !msg.uploading && window.open(msg.file.url, "_blank", "noopener")}
+                            onClick={() => !msg.uploading && onViewImage?.(msg.file)}
+                            // The photo is a control now that it opens a
+                            // viewer in place, so it is reachable and operable
+                            // without a pointer.
+                            role={msg.uploading ? undefined : "button"}
+                            tabIndex={msg.uploading ? undefined : 0}
+                            onKeyDown={(e) => {
+                                if (msg.uploading) return;
+                                if (e.key !== "Enter" && e.key !== " ") return;
+                                e.preventDefault();
+                                onViewImage?.(msg.file);
+                            }}
                         />
 
                         {msg.uploading && (
@@ -399,6 +411,7 @@ const ConversationRoom = ({ conversation }) => {
     const scrollRef = useRef(null);
     const prevLastId = useRef(null);
     const [previewFiles, setPreviewFiles] = useState(null); // null = closed
+    const [lightboxImage, setLightboxImage] = useState(null); // null = closed
     const [isDragging, setIsDragging] = useState(false);
     const [showJumpToLatest, setShowJumpToLatest] = useState(false);
     const dragCounter = useRef(0);
@@ -534,6 +547,15 @@ const ConversationRoom = ({ conversation }) => {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
+            {/* ✅ Full-size image viewer — replaces opening a new tab */}
+            {lightboxImage && (
+                <ImageLightbox
+                    src={lightboxImage.url}
+                    alt={lightboxImage.name || "Shared image"}
+                    onClose={() => setLightboxImage(null)}
+                />
+            )}
+
             {/* ✅ File Preview Modal */}
             {previewFiles && (
                 <FilePreviewModal
@@ -600,6 +622,7 @@ const ConversationRoom = ({ conversation }) => {
                                         isGroupEnd={isGroupEnd}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        onViewImage={setLightboxImage}
                                     />
                                 </div>
                             ))}

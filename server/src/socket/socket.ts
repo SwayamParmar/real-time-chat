@@ -18,11 +18,149 @@ import type {
 import { deleteFromCloudinary } from "../config/cloudinary";
 import * as messageService from "../services/message.service";
 import { MessageType } from "../enums/message-type.enum";
-import Message from "../models/message.model";
+import Message, { type Message as MessageDoc } from "../models/message.model";
 
 let io: Server;
 
-const onlineUsers = new Map<string, string>();
+/*
+ * PRESENCE
+ *
+ * Connect/disconnect alone cannot answer "is this user online?" — a user has
+ * as many sockets as they have tabs, a refresh briefly overlaps two of them,
+ * and a killed process (Render restart) never runs `disconnect` at all. So
+ * presence is ref-counted per user and backed by a heartbeat + TTL sweep:
+ *
+ *  - userSockets  : userId -> set of live socket ids (multi-tab ref count)
+ *  - socketSeen   : socketId -> last heartbeat timestamp (liveness)
+ *  - offlineTimers: userId -> pending "go offline" write (refresh grace)
+ *
+ * The DB `is_online` flag is only written on the 0↔1 transitions, so it stays
+ * in sync with the map instead of racing it.
+ */
+const userSockets = new Map<string, Set<string>>();
+const socketSeen = new Map<string, number>();
+const offlineTimers = new Map<string, NodeJS.Timeout>();
+
+// A socket with no heartbeat for this long is treated as dead and swept.
+const PRESENCE_TTL_MS = 45_000;
+const SWEEP_INTERVAL_MS = 15_000;
+// Grace before writing offline, so a refresh (old socket drops, new one
+// arrives ~1s later) never flickers the user to offline for everyone.
+const OFFLINE_GRACE_MS = 5_000;
+
+const onlineUserIds = (): string[] => Array.from(userSockets.keys());
+
+const broadcastPresence = (userId: string, isOnline: boolean, lastSeen: Date): void => {
+    io.emit("presenceUpdate", { userId, isOnline, lastSeen });
+    io.emit("onlineUsers", onlineUserIds());
+};
+
+const registerSocket = async (userId: string, socketId: string): Promise<void> => {
+    const pending = offlineTimers.get(userId);
+    if (pending) {
+        clearTimeout(pending);
+        offlineTimers.delete(userId);
+    }
+
+    socketSeen.set(socketId, Date.now());
+
+    const sockets = userSockets.get(userId) ?? new Set<string>();
+    const wasOffline = sockets.size === 0;
+    sockets.add(socketId);
+    userSockets.set(userId, sockets);
+
+    const lastSeen = new Date();
+    if (wasOffline) {
+        await User.findByIdAndUpdate(userId, { is_online: 1, lastSeen });
+    }
+    broadcastPresence(userId, true, lastSeen);
+};
+
+const writeOffline = async (userId: string): Promise<void> => {
+    offlineTimers.delete(userId);
+    // Re-check: a tab may have reconnected while the grace timer was pending.
+    if ((userSockets.get(userId)?.size ?? 0) > 0) return;
+
+    const lastSeen = new Date();
+    try {
+        await User.findByIdAndUpdate(userId, { is_online: 0, lastSeen });
+    } catch (error) {
+        console.error("Presence offline write error:", error);
+    }
+    broadcastPresence(userId, false, lastSeen);
+};
+
+const unregisterSocket = (userId: string, socketId: string, immediate = false): void => {
+    socketSeen.delete(socketId);
+
+    const sockets = userSockets.get(userId);
+    if (sockets) {
+        sockets.delete(socketId);
+        if (sockets.size === 0) userSockets.delete(userId);
+        // Another tab is still live — the user stays online.
+        else return;
+    }
+
+    if (offlineTimers.has(userId)) return;
+
+    if (immediate) {
+        void writeOffline(userId);
+        return;
+    }
+    offlineTimers.set(
+        userId,
+        setTimeout(() => void writeOffline(userId), OFFLINE_GRACE_MS)
+    );
+};
+
+/*
+ * Half-open sockets (laptop lid, killed browser, dropped mobile network) can
+ * sit in the map without ever emitting `disconnect`. Sweep anything that has
+ * stopped heart-beating and force it closed so presence converges.
+ */
+const sweepStalePresence = (): void => {
+    const cutoff = Date.now() - PRESENCE_TTL_MS;
+
+    for (const [socketId, seenAt] of socketSeen) {
+        if (seenAt > cutoff) continue;
+
+        const socket = io.sockets.sockets.get(socketId) as AuthenticatedSocket | undefined;
+        if (socket) {
+            socket.disconnect(true);
+            continue;
+        }
+        // Socket object already gone but the entry lingered — drop it by hand.
+        for (const [userId, sockets] of userSockets) {
+            if (sockets.has(socketId)) {
+                unregisterSocket(userId, socketId, true);
+                break;
+            }
+        }
+        socketSeen.delete(socketId);
+    }
+};
+
+/*
+ * A crashed or redeployed process leaves every user it was serving flagged
+ * `is_online: 1` forever, because `disconnect` never ran. Nothing is connected
+ * at boot by definition, so clear the flag before accepting connections.
+ */
+const resetPresenceOnBoot = async (): Promise<void> => {
+    try {
+        await User.updateMany({ is_online: 1 }, { $set: { is_online: 0 } });
+    } catch (error) {
+        console.error("Presence boot reset error:", error);
+    }
+};
+
+/**
+ * Whether the user still has a live socket anywhere.
+ *
+ * REST logout uses this so signing out of one tab does not mark an account
+ * offline while another tab is still connected.
+ */
+export const isUserOnline = (userId: string): boolean =>
+    (userSockets.get(userId)?.size ?? 0) > 0;
 
 interface AuthenticatedSocket extends Socket {
     user: SocketUser;
@@ -34,7 +172,14 @@ export const initSocket = (server: HttpServer): void => {
             origin: env.CLIENT_URL,
             methods: ["GET", "POST"],
         },
+        // Tighter than the 25s/20s defaults: a closed browser is detected in
+        // ~30s instead of ~45s, and the engine pong doubles as our heartbeat.
+        pingInterval: 15_000,
+        pingTimeout: 15_000,
     });
+
+    void resetPresenceOnBoot();
+    setInterval(sweepStalePresence, SWEEP_INTERVAL_MS).unref();
 
     io.use((socket, next) => {
         const authSocket = socket as AuthenticatedSocket;
@@ -62,13 +207,18 @@ export const initSocket = (server: HttpServer): void => {
 
         console.log("✅ Socket connected:", userId);
         await socket.join(`user:${userId}`);
-        await User.findByIdAndUpdate(userId, {
-            is_online: 1,
-            lastSeen: new Date(),
-        });
+        await registerSocket(userId, socket.id);
 
-        onlineUsers.set(userId, socket.id);
-        io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+        // Send the joining socket the current roster immediately, rather than
+        // leaving it blank until someone else's presence happens to change.
+        socket.emit("onlineUsers", onlineUserIds());
+
+        // Heartbeats. The engine-level pong is free and always present; the
+        // explicit client ping keeps the TTL fresh even on transports where
+        // the pong is not surfaced.
+        socket.conn.on("heartbeat", () => socketSeen.set(socket.id, Date.now()));
+        socket.on("presencePing", () => socketSeen.set(socket.id, Date.now()));
+
         const deliveredAt = new Date();
 
         try {
@@ -286,10 +436,26 @@ export const initSocket = (server: HttpServer): void => {
                 message.isEdited = true;
                 await message.save();
                 const populatedMessage = await message.populate("sender", "name email");
-                io.to(`user:${userId}`).emit("messageEdited", populatedMessage);
-                socket
-                    .to(message.conversationId.toString())
-                    .emit("messageEdited", populatedMessage);
+
+                /*
+                 * Same fan-out as receiveMessage / messageDeleted: the
+                 * conversation room only holds sockets with the chat open, so
+                 * a recipient on their conversation list never learned the
+                 * message had changed and kept previewing the old text.
+                 */
+                const conversationId = message.conversationId.toString();
+                const conversation = await Conversation.findById(message.conversationId)
+                    .select("participants")
+                    .lean();
+
+                const rooms = [
+                    conversationId,
+                    ...(conversation?.participants ?? []).map(
+                        (participantId) => `user:${participantId.toString()}`
+                    ),
+                ];
+
+                io.to(rooms).emit("messageEdited", populatedMessage);
             } catch (error) {
                 console.error("editMessage error:", error);
             }
@@ -323,29 +489,89 @@ export const initSocket = (server: HttpServer): void => {
 
                 await message.save();
                 const conversationId = message.conversationId.toString();
-                io.to(`user:${userId}`).emit("messageDeleted", {
+
+                /*
+                 * A soft delete leaves `conversation.lastMessage` pointing at
+                 * the message that just went away, so the list preview stayed
+                 * on it even across a full refetch. Repoint it at the newest
+                 * surviving message, or clear it when that was the only one.
+                 *
+                 * timestamps:false on purpose — getConversations sorts by
+                 * `updatedAt`, and deleting a message should not shove the
+                 * conversation to the top of everyone's list.
+                 */
+                const conversation = await Conversation.findById(message.conversationId).select(
+                    "participants lastMessage"
+                );
+
+                let lastMessage: MessageDoc | null = null;
+
+                if (conversation) {
+                    if (conversation.lastMessage?.toString() === messageId) {
+                        lastMessage = await Message.findOne({
+                            conversationId: message.conversationId,
+                            isDeleted: { $ne: true },
+                        })
+                            .sort({ createdAt: -1 })
+                            .populate("sender", "name email");
+
+                        await Conversation.updateOne(
+                            { _id: conversation._id },
+                            lastMessage
+                                ? { $set: { lastMessage: lastMessage._id } }
+                                : { $unset: { lastMessage: 1 } },
+                            { timestamps: false }
+                        );
+                    } else if (conversation.lastMessage) {
+                        // Not the last message — send the unchanged pointer
+                        // anyway so the payload is always authoritative and
+                        // the client never has to infer what to keep.
+                        lastMessage = await Message.findById(conversation.lastMessage).populate(
+                            "sender",
+                            "name email"
+                        );
+                    }
+                }
+
+                /*
+                 * Same fan-out as receiveMessage: the conversation room only
+                 * contains sockets that currently have the chat open, so a
+                 * recipient sitting on their conversation list heard nothing
+                 * and kept showing the deleted message as the preview until
+                 * they opened the chat. The `user:<id>` rooms are joined on
+                 * connect, and Socket.IO delivers once per socket across the
+                 * union, so a recipient in both rooms still gets one event.
+                 */
+                const rooms = [
+                    conversationId,
+                    ...(conversation?.participants ?? []).map(
+                        (participantId) => `user:${participantId.toString()}`
+                    ),
+                ];
+
+                io.to(rooms).emit("messageDeleted", {
                     messageId,
                     conversationId,
+                    lastMessage,
                 });
-
-                socket.to(conversationId).emit("messageDeleted", { messageId, conversationId });
             } catch (error) {
                 console.error("deleteMessage error:", error);
             }
         });
 
+        /*
+         * An explicit sign-out is not a dropped connection: drop this tab's
+         * socket right away and skip the refresh grace period, so the account
+         * reads offline immediately unless another tab is still connected.
+         */
+        socket.on("presenceLogout", () => {
+            unregisterSocket(userId, socket.id, true);
+            socket.disconnect(true);
+        });
+
         socket.on("disconnect", () => {
             console.log("❌ Disconnected:", userId);
-
-            User.findByIdAndUpdate(userId, {
-                is_online: 0,
-                lastSeen: new Date(),
-            }).catch((error) => {
-                console.error("Disconnect status update error:", error);
-            });
-
-            onlineUsers.delete(userId);
-            io.emit("onlineUsers", Array.from(onlineUsers.keys()));
+            unregisterSocket(userId, socket.id);
         });
     });
 };
