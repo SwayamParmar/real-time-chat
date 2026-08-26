@@ -74,7 +74,10 @@ const Login = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
-            const data = await response.json();
+            // A non-JSON body (proxy error page, gateway timeout) must not
+            // throw before the status has been read — that turned every
+            // failure into an opaque parse error instead of a real message.
+            const data = await response.json().catch(() => ({}));
             if (!response.ok) {
                 throw new Error(data.message || 'Failed to login');
             } else {

@@ -25,13 +25,36 @@ const ChatShell = () => {
         activeConversationId,
     } = useChatStore();
 
-    const { roomOpenOnMobile } = useChatLayout();
+    const { roomOpenOnMobile, closeRoom } = useChatLayout();
 
     useEffect(() => {
         initSocket();
         fetchConversations();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    /*
+     * Escape backs out of the open conversation, the same as the header's
+     * back arrow. Only bound while the room is showing on a phone — above md
+     * both panes are visible and there is nothing to back out to, which is
+     * also why closeRoom alone is enough and no breakpoint check is needed.
+     *
+     * Deferred to whatever is layered on top: a dialog, an open menu, or an
+     * edit in progress all own Escape first and handle it themselves.
+     */
+    useEffect(() => {
+        if (!roomOpenOnMobile) return undefined;
+
+        const onKeyDown = (e) => {
+            if (e.key !== "Escape") return;
+            if (useChatStore.getState().editingMessage) return;
+            if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+            closeRoom();
+        };
+
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [roomOpenOnMobile, closeRoom]);
 
     // 🔥 derive selected conversation
     const selectedConversation = conversations.find(

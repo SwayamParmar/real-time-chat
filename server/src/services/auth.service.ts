@@ -1,5 +1,7 @@
 import User from "../models/user.model";
 import { generateToken } from "../utils/jwt.util";
+import { HttpError } from "../utils/http-error.util";
+import { isUserOnline } from "../socket/socket";
 
 import type { SignupRequest } from "../types/signup-request.type";
 import type { LoginRequest } from "../types/login-request.type";
@@ -14,7 +16,7 @@ export const signup = async (
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-        throw new Error("Email already registered.");
+        throw new HttpError(409, "An account with this email already exists.");
     }
 
     const newUser = await User.create({
@@ -44,14 +46,21 @@ export const login = async (
 
     const user = await User.findOne({ email });
 
+    /*
+     * "No such account" and "wrong password" are told apart on purpose. The
+     * usual argument against it is email enumeration — but GET /api/user
+     * already hands every signed-in client the name and email of every user,
+     * so there is nothing here left to protect, and "please sign up first" is
+     * a far more useful answer than a blanket "invalid credentials".
+     */
     if (!user) {
-        throw new Error("Invalid email or password.");
+        throw new HttpError(404, "No account found with this email. Please sign up first.");
     }
 
     const isPasswordValid = await user.isValidPassword(password);
 
     if (!isPasswordValid) {
-        throw new Error("Invalid email or password.");
+        throw new HttpError(401, "Incorrect password. Please try again.");
     }
 
     const token = generateToken(user._id.toString());
@@ -78,17 +87,20 @@ export const login = async (
  * This mirrors the socket "disconnect" handler on purpose, and is safe to
  * run twice (the socket teardown may well write the same values a moment
  * later), because both are idempotent field updates rather than deltas.
+ *
+ * It is *not* unconditional, though: signing out of one tab must not mark the
+ * account offline while another tab still holds a live socket, so the presence
+ * ref count decides. The socket layer owns the write in that case.
  */
 export const logout = async (
     userId: string,
 ): Promise<LogoutResponse> => {
-    const user = await User.findByIdAndUpdate(userId, {
-        is_online: 0,
-        lastSeen: new Date(),
-    });
+    const update = isUserOnline(userId) ? {} : { is_online: 0, lastSeen: new Date() };
+
+    const user = await User.findByIdAndUpdate(userId, update);
 
     if (!user) {
-        throw new Error("User not found.");
+        throw new HttpError(404, "User not found.");
     }
 
     return {
