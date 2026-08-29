@@ -1,8 +1,38 @@
 import { create } from "zustand";
+import { toast } from "react-toastify";
 import config from "../config";
 import { useAuthStore } from "./authStore";
 import { connectSocket, getSocket } from "../socket/socketClient";
 const PAGE_SIZE = 20;
+
+const timeOf = (message) => {
+    const value = new Date(message?.createdAt).getTime();
+    // A message with no usable timestamp is one the client just created
+    // (an optimistic upload), so treat it as the newest thing there is.
+    return Number.isNaN(value) ? Infinity : value;
+};
+
+/**
+ * Fold a freshly fetched page 1 together with whatever is already on screen.
+ *
+ * The response describes the conversation as of the moment the request left,
+ * so anything that arrived while it was in flight is missing from it. Keeping
+ * local messages that are at least as new as the newest one the server
+ * returned restores exactly those, without resurrecting older cached history
+ * that has since fallen off page 1.
+ */
+const mergeInFlightMessages = (fetched, local) => {
+    if (!local?.length) return fetched;
+
+    const returned = new Set(fetched.map((m) => m._id));
+    const newestFetchedAt = fetched.length ? timeOf(fetched[fetched.length - 1]) : 0;
+
+    const inFlight = local.filter(
+        (m) => !returned.has(m._id) && timeOf(m) >= newestFetchedAt
+    );
+
+    return inFlight.length ? [...fetched, ...inFlight] : fetched;
+};
 export const useChatStore = create((set, get) => ({
     conversations: [],
     users: [],
@@ -52,6 +82,26 @@ export const useChatStore = create((set, get) => ({
         socket.off("messageDeleted");
         socket.off("messagesSeen");
         socket.off("messagesDelivered");
+        socket.off("messageError");
+        // Deliberately not connect/disconnect: socketClient owns handlers for
+        // those too, and off() would take its heartbeat down with ours.
+
+        /*
+         * The server has always emitted messageError when a send is refused —
+         * nothing has ever listened for it. A rejected send therefore did
+         * exactly nothing on screen: the composer cleared, no message
+         * appeared, and no error was raised anywhere the user or the console
+         * would show it. Any future "send does nothing" now says why.
+         */
+        socket.on("messageError", ({ message, tempId }) => {
+            console.error("Send failed:", message);
+            toast.error(message || "Message could not be sent", {
+                position: "top-right",
+                autoClose: 4000,
+                theme: "colored",
+            });
+            if (tempId) get().failPendingMessage(tempId);
+        });
 
         socket.on("receiveMessage", (message) => {
             const { activeConversationId } = get();
@@ -278,26 +328,41 @@ export const useChatStore = create((set, get) => ({
             }));
         });
 
+        /*
+         * Nothing is emitted here on purpose. Socket.IO buffers emits made
+         * while disconnected and replays them on reconnect, so a leave sent
+         * from this handler would arrive right as we are rejoining.
+         */
+        let wasDisconnected = false;
         socket.on("disconnect", () => {
-            const activeConvId = get().activeConversationId;
-            if (activeConvId) {
-                socket.emit("leaveConversation", activeConvId);
-            }
+            wasDisconnected = true;
         });
 
-        /*
-         * A reconnect is a brand-new server-side socket: it is put back into
-         * `user:<id>` automatically, but every conversation room it had joined
-         * is gone. Without this, typing indicators and read receipts silently
-         * stopped working after any transport blip.
-         */
         socket.on("connect", () => {
-            const activeConvId = get().activeConversationId;
-            if (activeConvId) {
-                socket.emit("joinConversation", activeConvId);
-                socket.emit("markAsRead", { conversationId: activeConvId });
-            }
+            if (!wasDisconnected) return;
+            wasDisconnected = false;
+            get().resync();
         });
+    },
+
+    /*
+     * Pull everything back in line after a gap in the connection.
+     *
+     * A reconnect gets a brand-new server-side socket: it is put back into
+     * `user:<id>` automatically, but its conversation rooms are gone and every
+     * event sent while we were away is simply lost. Rejoining alone left the
+     * list and the open thread stale until the user switched conversations.
+     */
+    resync: () => {
+        const { activeConversationId } = get();
+        // Anyone mid-keystroke when we dropped would otherwise stay "typing…"
+        // forever, since their stopTyping went to the old socket.
+        set({ typingUsers: {} });
+        get().fetchConversations();
+        // fetchMessages rejoins the room and marks as read on its way through.
+        if (activeConversationId) {
+            get().fetchMessages(activeConversationId, 1, true);
+        }
     },
 
     // Fetch Conversations
@@ -378,7 +443,7 @@ export const useChatStore = create((set, get) => ({
     },
 
     // FETCH MESSAGES (Pagination)
-    fetchMessages: async (conversationId, page = 1) => {
+    fetchMessages: async (conversationId, page = 1, force = false) => {
         const token = useAuthStore.getState().token;
 
         // Leave previous room, join new one
@@ -412,7 +477,7 @@ export const useChatStore = create((set, get) => ({
             prevConvId === conversationId &&
             (get().loadingMessages || get().messages.length > 0);
 
-        if (reselectingOpenConversation) return;
+        if (reselectingOpenConversation && !force) return;
 
         /*
          * Mark the conversation active BEFORE awaiting the network.
@@ -499,12 +564,30 @@ export const useChatStore = create((set, get) => ({
              */
             if (get().activeConversationId !== conversationId) return;
 
-            set((state) => ({
-                messages: page === 1 ? data.messages : [...data.messages, ...state.messages],
-                activeConversationId: conversationId,
-                page,
-                hasMore: data.messages.length === PAGE_SIZE,
-            }));
+            set((state) => {
+                /*
+                 * A page-1 response is a snapshot of the moment the request was
+                 * issued, so it cannot know about anything that arrived while
+                 * it was in flight. Replacing outright therefore silently
+                 * deleted a message sent during that window — invisibly in an
+                 * empty conversation, where the response is [] and the message
+                 * simply vanished with no error anywhere.
+                 *
+                 * Anything held locally that the server did not return is kept
+                 * and re-appended in arrival order.
+                 */
+                const merged =
+                    page === 1
+                        ? mergeInFlightMessages(data.messages ?? [], state.messages)
+                        : [...data.messages, ...state.messages];
+
+                return {
+                    messages: merged,
+                    activeConversationId: conversationId,
+                    page,
+                    hasMore: data.messages.length === PAGE_SIZE,
+                };
+            });
 
             if (page === 1) {
                 get().markAsRead(conversationId);
@@ -521,6 +604,39 @@ export const useChatStore = create((set, get) => ({
                 set({ loadingMessages: false });
             }
         }
+    },
+
+    /*
+     * Deselect the open conversation, returning the room pane to its
+     * "no conversation selected" state.
+     *
+     * Distinct from the mobile back gesture, which only hides the room pane
+     * and deliberately keeps it loaded. From md up there is no pane to hide —
+     * both are always on screen — so closing has to mean clearing the
+     * selection. The messages are snapshotted on the way out, exactly as
+     * switching conversations does, so re-opening still paints instantly.
+     */
+    closeConversation: () => {
+        const { activeConversationId, messages } = get();
+        if (!activeConversationId) return;
+
+        getSocket()?.emit("leaveConversation", activeConversationId);
+
+        set((state) => ({
+            activeConversationId: null,
+            messages: [],
+            page: 1,
+            hasMore: true,
+            editingMessage: null,
+            ...(messages.length
+                ? {
+                      messagesByConversation: {
+                          ...state.messagesByConversation,
+                          [activeConversationId]: messages.slice(-PAGE_SIZE),
+                      },
+                  }
+                : null),
+        }));
     },
 
     loadMoreMessages: async () => {

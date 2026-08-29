@@ -23,6 +23,7 @@ const ChatShell = () => {
         initSocket,
         conversations,
         activeConversationId,
+        closeConversation,
     } = useChatStore();
 
     const { roomOpenOnMobile, closeRoom } = useChatLayout();
@@ -34,27 +35,41 @@ const ChatShell = () => {
     }, []);
 
     /*
-     * Escape backs out of the open conversation, the same as the header's
-     * back arrow. Only bound while the room is showing on a phone — above md
-     * both panes are visible and there is nothing to back out to, which is
-     * also why closeRoom alone is enough and no breakpoint check is needed.
+     * Escape closes the open conversation, on every screen size — but "close"
+     * means two different things:
+     *
+     *   below md  the room is a pane stacked over the list, so Escape backs
+     *             out to the list and deliberately leaves the conversation
+     *             loaded, exactly like the header's back arrow
+     *   md and up both panes are always visible, so there is nothing to back
+     *             out to — Escape deselects instead, which is the only thing
+     *             closing can mean there
+     *
+     * The earlier version bound this only while the room pane was open on a
+     * phone, which is why it did nothing on desktop.
      *
      * Deferred to whatever is layered on top: a dialog, an open menu, or an
      * edit in progress all own Escape first and handle it themselves.
      */
     useEffect(() => {
-        if (!roomOpenOnMobile) return undefined;
-
         const onKeyDown = (e) => {
             if (e.key !== "Escape") return;
             if (useChatStore.getState().editingMessage) return;
             if (document.querySelector('[role="dialog"], [role="menu"]')) return;
-            closeRoom();
+
+            // Read at keypress time — nothing here needs to re-render when the
+            // viewport crosses the breakpoint.
+            if (window.matchMedia("(min-width: 768px)").matches) {
+                closeConversation();
+                return;
+            }
+
+            if (roomOpenOnMobile) closeRoom();
         };
 
         document.addEventListener("keydown", onKeyDown);
         return () => document.removeEventListener("keydown", onKeyDown);
-    }, [roomOpenOnMobile, closeRoom]);
+    }, [roomOpenOnMobile, closeRoom, closeConversation]);
 
     // 🔥 derive selected conversation
     const selectedConversation = conversations.find(

@@ -5,9 +5,28 @@ import { useAuthStore } from "../store/authStore";
 let socket;
 let heartbeatTimer;
 
-// Must stay well under the server's PRESENCE_TTL_MS (45s) so a live tab is
-// never swept as stale.
+// Must stay well under the server's PRESENCE_TTL_MS so a live tab is never
+// swept as stale.
 const HEARTBEAT_MS = 15000;
+
+const newId = () =>
+    crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+// Stable for the life of the tab. The server uses it to drop this tab's
+// previous socket when we reconnect, rather than leaving the dead one in the
+// presence set until it times out.
+const getTabId = () => {
+    try {
+        let id = sessionStorage.getItem("socketTabId");
+        if (!id) {
+            id = newId();
+            sessionStorage.setItem("socketTabId", id);
+        }
+        return id;
+    } catch {
+        return newId();
+    }
+};
 
 const startHeartbeat = () => {
     clearInterval(heartbeatTimer);
@@ -21,6 +40,14 @@ const stopHeartbeat = () => {
     heartbeatTimer = null;
 };
 
+// A tab that was asleep usually has a dead socket that has not noticed yet.
+// Reconnect on focus instead of waiting out the backoff.
+const onVisibilityChange = () => {
+    if (document.visibilityState === "visible" && socket && !socket.connected) {
+        socket.connect();
+    }
+};
+
 export const connectSocket = () => {
     const token = useAuthStore.getState().token;
     if (!token) return;
@@ -31,12 +58,13 @@ export const connectSocket = () => {
     if (socket) return socket;
 
     socket = io(config.SOCKET_URL, {
-        query: { token },
+        query: { token, tabId: getTabId() },
         transports: ["websocket"], // ✅ skip long-polling, go straight to websocket
         reconnection: true,
-        reconnectionDelay: 1000,
+        reconnectionDelay: 500,
         reconnectionDelayMax: 5000,
         reconnectionAttempts: Infinity,
+        timeout: 10000,
     });
 
     socket.on("connect", () => {
@@ -44,8 +72,17 @@ export const connectSocket = () => {
         socket.emit("presencePing");
         startHeartbeat();
     });
+
     socket.on("disconnect", stopHeartbeat);
-    socket.on("connect_error", (err) => console.error("❌ Socket error:", err.message));
+
+    socket.on("connect_error", (err) => {
+        console.error("❌ Socket error:", err.message);
+        // A rejected token fails identically every time, so retrying forever
+        // only hammers the server. Stop and let the auth layer deal with it.
+        if (/token/i.test(err.message)) socket.disconnect();
+    });
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return socket;
 };
@@ -54,6 +91,7 @@ export const getSocket = () => socket;
 
 export const disconnectSocket = () => {
     stopHeartbeat();
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     if (socket) {
         // Tell the server this is a deliberate sign-out, not a dropped
         // connection, so it skips the reconnect grace period.

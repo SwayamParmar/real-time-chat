@@ -41,6 +41,10 @@ const userSockets = new Map<string, Set<string>>();
 const socketSeen = new Map<string, number>();
 const offlineTimers = new Map<string, NodeJS.Timeout>();
 
+// tabId -> socket id, so a reconnecting tab replaces its own dead socket
+// instead of leaving it in the presence set until the sweep.
+const tabSockets = new Map<string, string>();
+
 // A socket with no heartbeat for this long is treated as dead and swept.
 const PRESENCE_TTL_MS = 45_000;
 const SWEEP_INTERVAL_MS = 15_000;
@@ -173,9 +177,9 @@ export const initSocket = (server: HttpServer): void => {
             methods: ["GET", "POST"],
         },
         // Tighter than the 25s/20s defaults: a closed browser is detected in
-        // ~30s instead of ~45s, and the engine pong doubles as our heartbeat.
-        pingInterval: 15_000,
-        pingTimeout: 15_000,
+        // ~20s instead of ~45s, and the engine pong doubles as our heartbeat.
+        pingInterval: 10_000,
+        pingTimeout: 10_000,
     });
 
     void resetPresenceOnBoot();
@@ -208,6 +212,28 @@ export const initSocket = (server: HttpServer): void => {
         console.log("✅ Socket connected:", userId);
         await socket.join(`user:${userId}`);
         await registerSocket(userId, socket.id);
+
+        /*
+         * Drop this tab's previous socket, if it still has one. A reconnect
+         * always creates a new socket while the old one can linger until its
+         * ping times out — so closing the tab in that window left the stale id
+         * holding the ref count up, and the user reading as online until the
+         * sweep caught it. Registered above first, so presence never dips.
+         */
+        const tabId =
+            typeof socket.handshake.query.tabId === "string"
+                ? socket.handshake.query.tabId
+                : null;
+
+        if (tabId) {
+            const previousId = tabSockets.get(tabId);
+            if (previousId && previousId !== socket.id) {
+                io.sockets.sockets.get(previousId)?.disconnect(true);
+                socketSeen.delete(previousId);
+                userSockets.get(userId)?.delete(previousId);
+            }
+            tabSockets.set(tabId, socket.id);
+        }
 
         // Send the joining socket the current roster immediately, rather than
         // leaving it blank until someone else's presence happens to change.
@@ -362,9 +388,57 @@ export const initSocket = (server: HttpServer): void => {
                     ...message.toObject(),
                     tempId,
                 });
+
+                /*
+                 * Delivery receipt for recipients who are already online.
+                 *
+                 * Delivery used to be computed in exactly one place — the
+                 * catch-up sweep in the connection handler above — which only
+                 * ever runs when someone *arrives*. A recipient who was
+                 * already connected therefore produced no receipt at all, so
+                 * the sender's ticks sat on "sent" until that recipient
+                 * happened to reconnect and the sweep picked the message up.
+                 *
+                 * The presence map already knows who is reachable, so the
+                 * receipt can be issued at send time for exactly those people.
+                 */
+                const onlineRecipients = (conversation?.participants ?? []).filter(
+                    (participantId) =>
+                        participantId.toString() !== userId &&
+                        isUserOnline(participantId.toString())
+                );
+
+                if (onlineRecipients.length > 0) {
+                    const deliveredAt = new Date();
+
+                    await Message.updateOne(
+                        { _id: message._id },
+                        {
+                            $addToSet: { deliveredTo: { $each: onlineRecipients } },
+                            $set: { deliveredAt },
+                        }
+                    );
+
+                    // The sender's personal room, so every tab they have open
+                    // updates its ticks, not just the one that sent.
+                    io.to(`user:${userId}`).emit("messagesDelivered", {
+                        conversationIds: [conversationId],
+                        deliveredAt,
+                    });
+                }
             } catch (error) {
                 console.error("[sendMessage] Error:", error);
-                socket.emit("messageError", { message: "Failed to send message", tempId });
+
+                // The real reason, not a generic string. "Conversation not
+                // found" and "Unauthorized" are the two ways a send is refused,
+                // and collapsing both into "Failed to send message" left the
+                // client with nothing to show and nothing to diagnose from.
+                socket.emit("messageError", {
+                    message:
+                        error instanceof Error ? error.message : "Failed to send message",
+                    conversationId,
+                    tempId,
+                });
             }
         });
 
@@ -571,6 +645,7 @@ export const initSocket = (server: HttpServer): void => {
 
         socket.on("disconnect", () => {
             console.log("❌ Disconnected:", userId);
+            if (tabId && tabSockets.get(tabId) === socket.id) tabSockets.delete(tabId);
             unregisterSocket(userId, socket.id);
         });
     });

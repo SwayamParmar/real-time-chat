@@ -332,19 +332,18 @@ const InputBar = ({ onSend, onFileSelect }) => {
                     disabled={!canSend}
                     onClick={handleSend}
                     /*
-                     * Suppressing the default stops the button from taking
-                     * focus off the textarea, so the keyboard stays up.
+                     * No preventDefault here on purpose.
                      *
-                     * Guarded to mouse: this was an onMouseDown handler, and
-                     * on touch the mousedown is a *compatibility* event
-                     * synthesised after touchend — WebKit suppresses the click
-                     * that follows it when its default is cancelled, so the
-                     * send button did nothing at all on iOS. handleSend
-                     * refocuses the composer itself, which covers touch.
+                     * This used to cancel the default on mousedown (and then
+                     * pointerdown) to stop the button stealing focus, so the
+                     * on-screen keyboard would stay up. Cancelling a pointer
+                     * default is exactly what can stop the click that follows
+                     * from ever being dispatched, which is the one failure the
+                     * send button cannot afford. handleSend refocuses the
+                     * composer itself, so the keyboard is preserved anyway —
+                     * without betting the whole action on browser-specific
+                     * event-suppression behaviour.
                      */
-                    onPointerDown={(e) => {
-                        if (e.pointerType === "mouse") e.preventDefault();
-                    }}
                     className="flex-shrink-0"
                 />
             </div>
