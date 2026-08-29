@@ -30,62 +30,61 @@ const config = {
       },
 
       colors: {
-        // ── Chat Surface Colors ─────────────────────────────
+        // Every token below resolves through a CSS variable defined in
+        // index.css, so the whole palette follows [data-theme]. Channels are
+        // space-separated to keep opacity modifiers (bg-brand/15) working.
         surface: {
-          base: "#0B0D14",   // slightly deeper for more contrast
-          panel: "#0F111A",  // tighter, more premium layering
-          raised: "#171A26", // smoother elevation
-          border: "#1F2333", // clearer separation
-          muted: "#262B40",  // hover / subtle states
+          base: 'rgb(var(--surface-base-rgb) / <alpha-value>)',
+          panel: 'rgb(var(--surface-panel-rgb) / <alpha-value>)',
+          raised: 'rgb(var(--surface-raised-rgb) / <alpha-value>)',
+          border: 'rgb(var(--surface-border-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--surface-muted-rgb) / <alpha-value>)',
+          rail: 'rgb(var(--surface-rail-rgb) / <alpha-value>)',
         },
 
-        // ── Text Colors ─────────────────────────────────────
         chat: {
-          primary: "#ECEFF8",   // slightly brighter for readability
-          secondary: "#C9D1F0", // cleaner contrast
-          muted: "#9AA3C7",     // input / placeholders
-          faint: "#5B6280",     // subtitles
-          ghost: "#404660",     // timestamps
-          dim: "#484E6A",       // message time
+          primary: 'rgb(var(--chat-primary-rgb) / <alpha-value>)',
+          secondary: 'rgb(var(--chat-secondary-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--chat-muted-rgb) / <alpha-value>)',
+          faint: 'rgb(var(--chat-faint-rgb) / <alpha-value>)',
+          ghost: 'rgb(var(--chat-ghost-rgb) / <alpha-value>)',
+          dim: 'rgb(var(--chat-dim-rgb) / <alpha-value>)',
         },
 
-        // ── Brand / Accent (UPGRADED — SAME KEYS) ───────────
         brand: {
-          DEFAULT: "#6366F1",   // indigo (main identity)
-          dark: "#4F46E5",      // stronger active state
+          DEFAULT: 'rgb(var(--brand-rgb) / <alpha-value>)',
+          dark: 'rgb(var(--brand-dark-rgb) / <alpha-value>)',
+          accent: 'rgb(var(--brand-accent-rgb) / <alpha-value>)',
+          highlight: 'rgb(var(--brand-highlight-rgb) / <alpha-value>)',
 
-          // glow now feels like light, not just opacity
-          glow: "rgba(99,102,241,0.35)",
-
-          // improved layered usage
-          muted: "rgba(99,102,241,0.18)",
-          subtle: "rgba(99,102,241,0.28)",
-
-          // NEW: energy accent (no breaking change)
-          accent: "#8B5CF6",     // purple richness
-          highlight: "#22D3EE",  // cyan (real-time feel)
+          glow: 'rgb(var(--brand-rgb) / 0.35)',
+          muted: 'rgb(var(--brand-rgb) / 0.18)',
+          subtle: 'rgb(var(--brand-rgb) / 0.28)',
         },
 
-        // ── Avatar palette ──────────────────────────────────
-        // Deterministic per-user avatar tints. Every avatar in the app used
-        // to be hardcoded to one off-palette purple, which made two people
-        // in a list visually indistinguishable at a glance.
+        danger: {
+          DEFAULT: 'rgb(var(--danger-rgb) / <alpha-value>)',
+          soft: 'rgb(var(--danger-rgb) / 0.12)',
+        },
+
+        // Deterministic per-user avatar tints. Saturated enough to read on
+        // either theme, so they are not themed.
         avatar: {
-          1: "#6366F1", // indigo
-          2: "#8B5CF6", // violet
-          3: "#22D3EE", // cyan
-          4: "#34D399", // emerald
-          5: "#F472B6", // pink
-          6: "#FBBF24", // amber
-          7: "#38BDF8", // sky
-          8: "#A78BFA", // light violet
+          1: '#6366F1', // indigo
+          2: '#8B5CF6', // violet
+          3: '#22D3EE', // cyan
+          4: '#34D399', // emerald
+          5: '#F472B6', // pink
+          6: '#FBBF24', // amber
+          7: '#38BDF8', // sky
+          8: '#A78BFA', // light violet
         },
 
-        // ── Status Dots (SLIGHTLY PREMIUM-TUNED) ────────────
         status: {
-          online: "#34D399",   // softer emerald (less harsh)
-          away: "#FBBF24",     // warmer amber
-          offline: "#6B7280",
+          online: 'rgb(var(--status-online-rgb) / <alpha-value>)',
+          away: 'rgb(var(--status-away-rgb) / <alpha-value>)',
+          offline: 'rgb(var(--status-offline-rgb) / <alpha-value>)',
+          seen: 'rgb(var(--status-seen-rgb) / <alpha-value>)',
         },
       },
 
@@ -113,11 +112,11 @@ const config = {
         typingBounce: {
           "0%, 60%, 100%": {
             transform: "translateY(0)",
-            backgroundColor: "#4A5068"
+            backgroundColor: "var(--chat-ghost)"
           },
           "30%": {
             transform: "translateY(-5px)",
-            backgroundColor: "#22D3EE" // 🔥 cyan = real-time feedback
+            backgroundColor: "var(--brand-highlight)"
           },
         },
 
@@ -166,13 +165,13 @@ const config = {
       },
 
       boxShadow: {
-        panel: "0 6px 20px rgba(0,0,0,0.35)",
+        panel: "var(--shadow-panel)",
 
         // refined glow (less purple, more indigo realism)
-        bubble: "0 6px 18px rgba(99,102,241,0.25)",
+        bubble: "0 6px 18px rgb(var(--brand-rgb) / 0.25)",
 
         // NEW: subtle cyan interaction glow
-        focus: "0 0 0 2px rgba(34,211,238,0.35)",
+        focus: "0 0 0 2px rgb(var(--brand-highlight-rgb) / 0.35)",
       }
     },
   },

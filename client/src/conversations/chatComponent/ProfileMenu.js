@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiMoon, FiSun } from "react-icons/fi";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
+import { useThemeStore } from "../../store/themeStore";
 import { Avatar } from "../chatUtils";
 
 /* ─────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ const PLACEMENTS = {
 const ProfileMenu = ({ placement = "rail" }) => {
     const { user, logout } = useAuthStore();
     const resetChat = useChatStore((state) => state.reset);
+    const { theme, toggleTheme } = useThemeStore();
     const navigate = useNavigate();
 
     const [open, setOpen] = useState(false);
@@ -110,17 +112,33 @@ const ProfileMenu = ({ placement = "rail" }) => {
                     <button
                         type="button"
                         role="menuitem"
+                        onClick={toggleTheme}
+                        className="flex items-center gap-2.5 w-full px-3 py-3 text-left text-[12.5px] sm:text-[13px]
+                                   text-chat-secondary hover:bg-surface-raised
+                                   transition-colors duration-150"
+                    >
+                        {theme === "dark" ? (
+                            <FiSun size={14} aria-hidden="true" />
+                        ) : (
+                            <FiMoon size={14} aria-hidden="true" />
+                        )}
+                        {theme === "dark" ? "Light mode" : "Dark mode"}
+                    </button>
+
+                    <button
+                        type="button"
+                        role="menuitem"
                         onClick={handleLogout}
                         disabled={signingOut}
                         className="flex items-center gap-2.5 w-full px-3 py-3 text-left text-[12.5px] sm:text-[13px]
-                                   text-red-400 hover:bg-red-500/10 disabled:opacity-60
+                                   text-danger hover:bg-danger-soft disabled:opacity-60
                                    transition-colors duration-150"
                     >
                         {signingOut ? (
                             <>
                                 <span
                                     aria-hidden="true"
-                                    className="w-3.5 h-3.5 rounded-full animate-spin border-2 border-red-400 border-t-transparent"
+                                    className="w-3.5 h-3.5 rounded-full animate-spin border-2 border-danger border-t-transparent"
                                 />
                                 Signing out…
                             </>

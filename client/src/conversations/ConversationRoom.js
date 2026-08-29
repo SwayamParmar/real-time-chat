@@ -58,7 +58,7 @@ const DeliveryTicks = ({ msg }) => {
         return (
             <BsCheckAll
                 size={14}
-                className="inline ml-0.5 flex-shrink-0 text-sky-300"
+                className="inline ml-0.5 flex-shrink-0 text-status-seen"
                 role="img"
                 aria-label="Seen"
             />
@@ -173,7 +173,7 @@ const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
                             setOpen(false);
                         }}
                         className="flex items-center gap-2.5 px-3 py-2.5 w-full text-left text-[13px]
-                                   text-red-400 hover:bg-red-500/10 transition-colors"
+                                   text-danger hover:bg-danger-soft transition-colors"
                     >
                         <FiTrash2 size={13} aria-hidden="true" /> Delete
                     </button>
@@ -340,7 +340,7 @@ const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete, onViewIma
                                         Uploading…
                                     </span>
                                 ) : msg.uploadFailed ? (
-                                    <span className="text-red-300">Upload failed</span>
+                                    <span className="text-danger">Upload failed</span>
                                 ) : (
                                     formatFileSize(msg.file?.size)
                                 )}
