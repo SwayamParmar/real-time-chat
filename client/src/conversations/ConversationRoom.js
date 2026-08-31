@@ -25,6 +25,7 @@ import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { IoBan } from "react-icons/io5";
 import FilePreviewModal from "./chatComponent/FilePreviewModal";
 import ImageLightbox from "./chatComponent/ImageLightbox";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { FaFileAlt } from "react-icons/fa";
 
 // Consecutive messages from the same person inside this window are drawn as
@@ -412,6 +413,7 @@ const ConversationRoom = ({ conversation }) => {
     const prevLastId = useRef(null);
     const [previewFiles, setPreviewFiles] = useState(null); // null = closed
     const [lightboxImage, setLightboxImage] = useState(null); // null = closed
+    const [pendingDeleteId, setPendingDeleteId] = useState(null); // null = closed
     const [isDragging, setIsDragging] = useState(false);
     const [showJumpToLatest, setShowJumpToLatest] = useState(false);
     const dragCounter = useRef(0);
@@ -497,7 +499,12 @@ const ConversationRoom = ({ conversation }) => {
     };
 
     const handleEdit = useCallback((msg) => setEditingMessage(msg), [setEditingMessage]);
-    const handleDelete = useCallback((msgId) => emitDeleteMessage(msgId), [emitDeleteMessage]);
+    const handleDelete = useCallback((msgId) => setPendingDeleteId(msgId), []);
+
+    const confirmDelete = () => {
+        emitDeleteMessage(pendingDeleteId);
+        setPendingDeleteId(null);
+    };
 
     /*
      * Grouping and day boundaries are derived from the message list rather
@@ -547,6 +554,17 @@ const ConversationRoom = ({ conversation }) => {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
+            {pendingDeleteId && (
+                <ConfirmDialog
+                    destructive
+                    title="Delete message?"
+                    description="This deletes the message for everyone in this conversation. It cannot be undone."
+                    confirmLabel="Delete"
+                    onConfirm={confirmDelete}
+                    onClose={() => setPendingDeleteId(null)}
+                />
+            )}
+
             {/* ✅ Full-size image viewer — replaces opening a new tab */}
             {lightboxImage && (
                 <ImageLightbox
