@@ -5,6 +5,12 @@ export interface SocketUser {
     userId: string;
 }
 
+export interface PresenceUpdateData {
+    userId: string;
+    isOnline: boolean;
+    lastSeen: Date;
+}
+
 export interface JoinConversationData {
     conversationId: string;
 }
