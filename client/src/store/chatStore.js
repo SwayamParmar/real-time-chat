@@ -3,6 +3,8 @@ import { toast } from "react-toastify";
 import config from "../config";
 import { useAuthStore } from "./authStore";
 import { connectSocket, getSocket } from "../socket/socketClient";
+import { notifyNewMessage } from "../notifications/notify";
+import { lastMessagePreview } from "../conversations/lastMessagePreview";
 const PAGE_SIZE = 20;
 
 const timeOf = (message) => {
@@ -174,6 +176,26 @@ export const useChatStore = create((set, get) => ({
              */
             if (msgConvId && !get().conversations.some((conv) => conv._id === msgConvId)) {
                 get().fetchConversations();
+            }
+
+            /*
+             * Notify unless the recipient is already looking at this chat.
+             * Reading visibilityState live covers the "open in a background
+             * tab" case, which activeConversationId alone cannot see.
+             */
+            const { user } = useAuthStore.getState();
+            const isMine = message.sender?._id === user?.id;
+            const isWatching =
+                msgConvId === get().activeConversationId &&
+                document.visibilityState === "visible";
+
+            if (!isMine && !isWatching) {
+                notifyNewMessage({
+                    messageId: message._id,
+                    senderName: message.sender?.name || "Someone",
+                    body: lastMessagePreview(message).text,
+                    onClick: () => get().fetchMessages(msgConvId),
+                });
             }
         });
 
