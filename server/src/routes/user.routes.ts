@@ -13,6 +13,19 @@ const router = Router();
 router.get("/", authMiddleware, userController.getUsers);
 
 /**
+ * Notification / account preferences
+ */
+router.get("/settings", authMiddleware, userController.getSettings);
+router.patch("/settings", authMiddleware, [
+        body("notifications_enabled")
+            .isBoolean()
+            .withMessage("notifications_enabled must be true or false"),
+    ],
+    validateRequest,
+    userController.updateSettings,
+);
+
+/**
  * User Registration
  */
 router.post("/signup", [

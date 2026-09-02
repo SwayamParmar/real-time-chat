@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useChatStore } from "../store/chatStore";
+import { useSettingsStore } from "../store/settingsStore";
 import ConversationList from "./ConversationList";
 import ConversationRoom from "./ConversationRoom";
 import ConversationNav from "./ConversationNav";
@@ -31,6 +32,7 @@ const ChatShell = () => {
     useEffect(() => {
         initSocket();
         fetchConversations();
+        useSettingsStore.getState().fetchSettings();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
