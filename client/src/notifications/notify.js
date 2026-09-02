@@ -1,4 +1,5 @@
 import { toast } from "react-toastify";
+import { useSettingsStore } from "../store/settingsStore";
 
 const CLAIM_KEY = "notifiedMessages";
 const CLAIM_TTL = 15000;
@@ -61,6 +62,10 @@ const askOnce = () => {
 
 export const notifyNewMessage = ({ messageId, senderName, body, onClick }) => {
     if (!supported()) return;
+
+    // Checked before the permission prompt, so turning notifications off also
+    // stops the app asking for permission it has no use for.
+    if (!useSettingsStore.getState().notificationsEnabled) return;
 
     // Read every time — permission can be revoked in browser settings at any
     // point after it was granted.
