@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiLogOut, FiMoon, FiSun } from "react-icons/fi";
+import { FiBell, FiBellOff, FiLogOut, FiMoon, FiSun } from "react-icons/fi";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useThemeStore } from "../../store/themeStore";
+import { useSettingsStore } from "../../store/settingsStore";
 import { Avatar } from "../chatUtils";
 
 /* ─────────────────────────────────────────────────────────────
@@ -26,6 +27,8 @@ const ProfileMenu = ({ placement = "rail" }) => {
     const { user, logout } = useAuthStore();
     const resetChat = useChatStore((state) => state.reset);
     const { theme, toggleTheme } = useThemeStore();
+    const { notificationsEnabled, setNotificationsEnabled } = useSettingsStore();
+    const resetSettings = useSettingsStore((state) => state.reset);
     const navigate = useNavigate();
 
     const [open, setOpen] = useState(false);
@@ -57,6 +60,7 @@ const ProfileMenu = ({ placement = "rail" }) => {
         // Clear the chat session before the auth session, so no listener or
         // pending fetch is left holding a token that is about to be discarded.
         resetChat();
+        resetSettings();
         await logout();
 
         // Straight to the sign-in screen rather than the marketing landing
@@ -108,6 +112,33 @@ const ProfileMenu = ({ placement = "rail" }) => {
                             </p>
                         )}
                     </div>
+
+                    <button
+                        type="button"
+                        role="menuitemcheckbox"
+                        aria-checked={notificationsEnabled}
+                        onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                        className="flex items-center gap-2.5 w-full px-3 py-3 text-left text-[12.5px] sm:text-[13px]
+                                   text-chat-secondary hover:bg-surface-raised
+                                   transition-colors duration-150"
+                    >
+                        {notificationsEnabled ? (
+                            <FiBell size={14} aria-hidden="true" />
+                        ) : (
+                            <FiBellOff size={14} aria-hidden="true" />
+                        )}
+                        <span className="flex-1">Notifications</span>
+                        <span
+                            aria-hidden="true"
+                            className={`w-8 h-[18px] rounded-full flex-shrink-0 relative transition-colors duration-200
+                                        ${notificationsEnabled ? "bg-brand" : "bg-surface-muted"}`}
+                        >
+                            <span
+                                className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all duration-200
+                                            ${notificationsEnabled ? "left-[16px]" : "left-0.5"}`}
+                            />
+                        </span>
+                    </button>
 
                     <button
                         type="button"
