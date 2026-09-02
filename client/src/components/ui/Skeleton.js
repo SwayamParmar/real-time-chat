@@ -16,7 +16,7 @@ export const Skeleton = ({ className = "" }) => (
     >
         <span
             className="absolute inset-0 -translate-x-full animate-shimmer
-                       bg-gradient-to-r from-transparent via-white/[0.06] to-transparent"
+                       bg-gradient-to-r from-transparent via-[var(--shimmer)] to-transparent"
         />
     </span>
 );

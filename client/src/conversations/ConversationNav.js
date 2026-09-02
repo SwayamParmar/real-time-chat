@@ -40,7 +40,7 @@ const ConversationNav = ({ activeTab = "chats", onTabChange }) => {
         <nav
             aria-label="Primary"
             className="hidden md:flex w-16 flex-shrink-0 flex-col items-center py-4 h-full
-                       bg-[#0A0C12] border-r border-surface-border"
+                       bg-surface-rail border-r border-surface-border"
         >
             {/* ── Logo ─────────────────────────────────────────────── */}
             <LogoMark className="h-8 mb-6 flex-shrink-0" />

@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response, } from "express";
 import * as authService from "../services/auth.service";
 import * as userService from "../services/user.service";
 
+import type { UpdateUserSettingsRequest } from "../types/user-settings.type";
+
 export const signup = async ( req: Request, res: Response, next: NextFunction, ): Promise<void> => {
     try {
         const result = await authService.signup({
@@ -43,6 +45,26 @@ export const getUsers = async ( req: Request, res: Response, next: NextFunction,
     try {
         const users = await userService.getUsers(req.user!.userId);
         res.status(200).json({ users });
+    } catch (error) {
+        next(error);
+    }
+};
+export const getSettings = async ( req: Request, res: Response, next: NextFunction, ): Promise<void> => {
+    try {
+        const settings = await userService.getSettings(req.user!.userId);
+        res.status(200).json({ settings });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateSettings = async ( req: Request, res: Response, next: NextFunction, ): Promise<void> => {
+    try {
+        const settings = await userService.updateSettings(
+            req.user!.userId,
+            req.body as UpdateUserSettingsRequest,
+        );
+        res.status(200).json({ settings });
     } catch (error) {
         next(error);
     }

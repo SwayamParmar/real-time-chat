@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useChatStore } from "../store/chatStore";
+import { useSettingsStore } from "../store/settingsStore";
 import ConversationList from "./ConversationList";
 import ConversationRoom from "./ConversationRoom";
 import ConversationNav from "./ConversationNav";
@@ -23,15 +24,54 @@ const ChatShell = () => {
         initSocket,
         conversations,
         activeConversationId,
+        closeConversation,
     } = useChatStore();
 
-    const { roomOpenOnMobile } = useChatLayout();
+    const { roomOpenOnMobile, closeRoom } = useChatLayout();
 
     useEffect(() => {
         initSocket();
         fetchConversations();
+        useSettingsStore.getState().fetchSettings();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    /*
+     * Escape closes the open conversation, on every screen size — but "close"
+     * means two different things:
+     *
+     *   below md  the room is a pane stacked over the list, so Escape backs
+     *             out to the list and deliberately leaves the conversation
+     *             loaded, exactly like the header's back arrow
+     *   md and up both panes are always visible, so there is nothing to back
+     *             out to — Escape deselects instead, which is the only thing
+     *             closing can mean there
+     *
+     * The earlier version bound this only while the room pane was open on a
+     * phone, which is why it did nothing on desktop.
+     *
+     * Deferred to whatever is layered on top: a dialog, an open menu, or an
+     * edit in progress all own Escape first and handle it themselves.
+     */
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            if (e.key !== "Escape") return;
+            if (useChatStore.getState().editingMessage) return;
+            if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+
+            // Read at keypress time — nothing here needs to re-render when the
+            // viewport crosses the breakpoint.
+            if (window.matchMedia("(min-width: 768px)").matches) {
+                closeConversation();
+                return;
+            }
+
+            if (roomOpenOnMobile) closeRoom();
+        };
+
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [roomOpenOnMobile, closeRoom, closeConversation]);
 
     // 🔥 derive selected conversation
     const selectedConversation = conversations.find(

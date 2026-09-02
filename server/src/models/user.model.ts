@@ -11,6 +11,7 @@ export interface User extends Document {
     is_online: number;
     lastSeen: Date;
     isVerified: number;
+    notifications_enabled: boolean;
     createdAt: Date;
     updatedAt: Date;
     isValidPassword(password: string): Promise<boolean>;
@@ -26,6 +27,7 @@ const userSchema = new Schema<User>(
         is_online: { type: Number, default: 0 },
         lastSeen: { type: Date, default: Date.now },
         isVerified: { type: Number, default: 0 },
+        notifications_enabled: { type: Boolean, default: true },
     },
     { timestamps: true },
 );

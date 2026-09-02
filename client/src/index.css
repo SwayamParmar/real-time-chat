@@ -21,6 +21,107 @@
   --safe-right: env(safe-area-inset-right, 0px);
 }
 
+/* ─── Palette ─────────────────────────────────────────────────
+   Single source of truth for colour, shared by Tailwind (via
+   tailwind.config.js) and by the inline var() styles on the
+   landing and auth pages. These tokens used to live in
+   landing.css, which is only imported by two components.
+
+   Each colour is stored as RGB channels so Tailwind can compose
+   opacity modifiers (bg-brand/15), with an rgb() alias beside it
+   for anything using the token directly as a colour.
+───────────────────────────────────────────────────────────── */
+:root {
+  --surface-base-rgb: 11 13 20;
+  --surface-panel-rgb: 15 17 26;
+  --surface-raised-rgb: 23 26 38;
+  --surface-border-rgb: 31 35 51;
+  --surface-muted-rgb: 38 43 64;
+  --surface-rail-rgb: 10 12 18;
+
+  --chat-primary-rgb: 236 239 248;
+  --chat-secondary-rgb: 201 209 240;
+  --chat-muted-rgb: 154 163 199;
+  --chat-faint-rgb: 91 98 128;
+  --chat-ghost-rgb: 64 70 96;
+  --chat-dim-rgb: 72 78 106;
+
+  --brand-rgb: 99 102 241;
+  --brand-dark-rgb: 79 70 229;
+  --brand-accent-rgb: 139 92 246;
+  --brand-highlight-rgb: 34 211 238;
+
+  --status-online-rgb: 52 211 153;
+  --status-away-rgb: 251 191 36;
+  --status-offline-rgb: 107 114 128;
+  --status-seen-rgb: 125 211 252;
+
+  --danger-rgb: 248 113 113;
+
+  --shadow-panel: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shimmer: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] {
+  --surface-base-rgb: 244 246 251;
+  --surface-panel-rgb: 255 255 255;
+  --surface-raised-rgb: 237 240 248;
+  --surface-border-rgb: 219 224 237;
+  --surface-muted-rgb: 201 208 226;
+  --surface-rail-rgb: 255 255 255;
+
+  --chat-primary-rgb: 22 26 40;
+  --chat-secondary-rgb: 51 58 82;
+  --chat-muted-rgb: 88 96 124;
+  --chat-faint-rgb: 122 130 158;
+  --chat-ghost-rgb: 148 155 178;
+  --chat-dim-rgb: 138 145 170;
+
+  --brand-dark-rgb: 67 56 202;
+
+  --status-online-rgb: 5 150 105;
+  --status-away-rgb: 217 119 6;
+  --status-seen-rgb: 2 132 199;
+
+  --danger-rgb: 220 38 38;
+
+  --shadow-panel: 0 6px 20px rgba(15, 23, 42, 0.1);
+  --shimmer: rgba(15, 23, 42, 0.06);
+}
+
+/* Direct-use aliases. Every var(--brand) style in the landing and
+   auth pages keeps working and now follows the active theme. */
+:root {
+  --surface-base: rgb(var(--surface-base-rgb));
+  --surface-panel: rgb(var(--surface-panel-rgb));
+  --surface-raised: rgb(var(--surface-raised-rgb));
+  --surface-border: rgb(var(--surface-border-rgb));
+  --surface-muted: rgb(var(--surface-muted-rgb));
+
+  --chat-primary: rgb(var(--chat-primary-rgb));
+  --chat-secondary: rgb(var(--chat-secondary-rgb));
+  --chat-muted: rgb(var(--chat-muted-rgb));
+  --chat-faint: rgb(var(--chat-faint-rgb));
+  --chat-ghost: rgb(var(--chat-ghost-rgb));
+
+  --brand: rgb(var(--brand-rgb));
+  --brand-dark: rgb(var(--brand-dark-rgb));
+  --brand-accent: rgb(var(--brand-accent-rgb));
+  --brand-highlight: rgb(var(--brand-highlight-rgb));
+
+  --brand-soft: rgb(var(--brand-rgb) / 0.08);
+  --brand-glow: rgb(var(--brand-rgb) / 0.16);
+  --brand-subtle: rgb(var(--brand-rgb) / 0.3);
+  --brand-strong: rgb(var(--brand-rgb) / 0.45);
+
+  --status-online: rgb(var(--status-online-rgb));
+  --status-away: rgb(var(--status-away-rgb));
+  --status-offline: rgb(var(--status-offline-rgb));
+
+  --shadow-md: var(--shadow-panel);
+  --shadow-brand: 0 8px 24px rgb(var(--brand-dark-rgb) / 0.35);
+}
+
 *,
 *::before,
 *::after {
@@ -36,7 +137,8 @@ html {
 body {
   margin: 0;
   padding: 0;
-  background: #0b0d14; /* surface.base */
+  background: var(--surface-base);
+  color: var(--chat-primary);
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -67,17 +169,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #262b40; /* surface.muted */
+  background-color: var(--surface-muted);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #333a55;
+  background-color: var(--chat-ghost);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #262b40 transparent;
+  scrollbar-color: var(--surface-muted) transparent;
 }
 
 .hide-scrollbar::-webkit-scrollbar {

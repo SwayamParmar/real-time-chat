@@ -14,42 +14,8 @@
    the auth pages and the chat app share one palette.
 ─────────────────────────────────────────────── */
 :root {
-    /* Surfaces */
-    --surface-base: #0b0d14;
-    --surface-panel: #0f111a;
-    --surface-raised: #171a26;
-    --surface-border: #1f2333;
-    --surface-muted: #262b40;
-
-    /* Text */
-    --chat-primary: #eceff8;
-    --chat-secondary: #c9d1f0;
-    --chat-muted: #9aa3c7;
-    --chat-faint: #5b6280;
-    --chat-ghost: #404660;
-
-    /* Brand */
-    --brand: #6366f1;
-    --brand-dark: #4f46e5;
-    --brand-accent: #8b5cf6;
-    --brand-highlight: #22d3ee;
-
-    /* Brand tints — low to high opacity */
-    --brand-soft: rgba(99, 102, 241, 0.08);
-    --brand-glow: rgba(99, 102, 241, 0.16);
-    --brand-subtle: rgba(99, 102, 241, 0.3);
-    --brand-strong: rgba(99, 102, 241, 0.45);
-
-    /* Status */
-    --status-online: #34d399;
-    --status-away: #fbbf24;
-    --status-offline: #6b7280;
-
-    /* Elevation */
-    --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.35);
-    --shadow-brand: 0 8px 24px rgba(79, 70, 229, 0.35);
-
-    /* Rhythm */
+    /* Palette now lives in index.css so every page shares it and the
+       light theme can override it. Only landing-specific rhythm here. */
     --header-h: 64px;
 }
 

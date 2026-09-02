@@ -8,7 +8,6 @@ import ConversationListHeader from "./chatComponent/ConversationListHeader";
 import { ConversationSkeleton } from "../components/ui/Skeleton";
 import EmptyState from "../components/ui/EmptyState";
 import { formatTimestampOnList } from "../timeFormat/formatTimestamp";
-import { IoBan } from "react-icons/io5";
 import { FiMessageCircle, FiSearch } from "react-icons/fi";
 
 /* ─────────────────────────────────────────────────────────────
@@ -22,6 +21,9 @@ import { FiMessageCircle, FiSearch } from "react-icons/fi";
 
 const ConversationRow = ({ conv, otherUser, isActive, isOnline, isTyping, onOpen }) => {
     const { text, icon: PreviewIcon } = lastMessagePreview(conv.lastMessage);
+    // "No messages" is a placeholder, not content — set it apart from a real
+    // preview the same way the deleted-message row used to be.
+    const empty = !conv.lastMessage;
     const unread = conv.unreadCount > 0;
     const timestamp = conv.lastMessage?.createdAt;
 
@@ -73,17 +75,14 @@ const ConversationRow = ({ conv, otherUser, isActive, isOnline, isTyping, onOpen
                                 <span className="text-brand-highlight font-medium truncate">
                                     typing…
                                 </span>
-                            ) : conv.lastMessage?.isDeleted ? (
-                                <>
-                                    <IoBan aria-hidden="true" size={13} className="flex-shrink-0" />
-                                    <span className="italic opacity-70 truncate">Message deleted</span>
-                                </>
                             ) : (
                                 <>
                                     {PreviewIcon && (
                                         <PreviewIcon aria-hidden="true" className="w-3.5 h-3.5 flex-shrink-0" />
                                     )}
-                                    <span className="truncate">{text}</span>
+                                    <span className={empty ? "italic opacity-70 truncate" : "truncate"}>
+                                        {text}
+                                    </span>
                                 </>
                             )}
                         </span>

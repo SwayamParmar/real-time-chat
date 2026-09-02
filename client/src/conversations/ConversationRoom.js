@@ -24,6 +24,8 @@ import {
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { IoBan } from "react-icons/io5";
 import FilePreviewModal from "./chatComponent/FilePreviewModal";
+import ImageLightbox from "./chatComponent/ImageLightbox";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { FaFileAlt } from "react-icons/fa";
 
 // Consecutive messages from the same person inside this window are drawn as
@@ -57,7 +59,7 @@ const DeliveryTicks = ({ msg }) => {
         return (
             <BsCheckAll
                 size={14}
-                className="inline ml-0.5 flex-shrink-0 text-sky-300"
+                className="inline ml-0.5 flex-shrink-0 text-status-seen"
                 role="img"
                 aria-label="Seen"
             />
@@ -172,7 +174,7 @@ const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
                             setOpen(false);
                         }}
                         className="flex items-center gap-2.5 px-3 py-2.5 w-full text-left text-[13px]
-                                   text-red-400 hover:bg-red-500/10 transition-colors"
+                                   text-danger hover:bg-danger-soft transition-colors"
                     >
                         <FiTrash2 size={13} aria-hidden="true" /> Delete
                     </button>
@@ -183,7 +185,7 @@ const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
 };
 
 // ─── Message bubble ───────────────────────────────────────────
-const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete }) => {
+const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete, onViewImage }) => {
     // ✅ Deleted placeholder
     if (msg.isDeleted) {
         return (
@@ -272,7 +274,18 @@ const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete }) => {
                             decoding="async"
                             className={`block w-auto max-w-full max-h-[min(340px,50dvh)] object-cover
                                         ${msg.uploading ? "opacity-50 blur-[1px]" : "cursor-pointer"}`}
-                            onClick={() => !msg.uploading && window.open(msg.file.url, "_blank", "noopener")}
+                            onClick={() => !msg.uploading && onViewImage?.(msg.file)}
+                            // The photo is a control now that it opens a
+                            // viewer in place, so it is reachable and operable
+                            // without a pointer.
+                            role={msg.uploading ? undefined : "button"}
+                            tabIndex={msg.uploading ? undefined : 0}
+                            onKeyDown={(e) => {
+                                if (msg.uploading) return;
+                                if (e.key !== "Enter" && e.key !== " ") return;
+                                e.preventDefault();
+                                onViewImage?.(msg.file);
+                            }}
                         />
 
                         {msg.uploading && (
@@ -328,7 +341,7 @@ const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete }) => {
                                         Uploading…
                                     </span>
                                 ) : msg.uploadFailed ? (
-                                    <span className="text-red-300">Upload failed</span>
+                                    <span className="text-danger">Upload failed</span>
                                 ) : (
                                     formatFileSize(msg.file?.size)
                                 )}
@@ -399,6 +412,8 @@ const ConversationRoom = ({ conversation }) => {
     const scrollRef = useRef(null);
     const prevLastId = useRef(null);
     const [previewFiles, setPreviewFiles] = useState(null); // null = closed
+    const [lightboxImage, setLightboxImage] = useState(null); // null = closed
+    const [pendingDeleteId, setPendingDeleteId] = useState(null); // null = closed
     const [isDragging, setIsDragging] = useState(false);
     const [showJumpToLatest, setShowJumpToLatest] = useState(false);
     const dragCounter = useRef(0);
@@ -484,7 +499,12 @@ const ConversationRoom = ({ conversation }) => {
     };
 
     const handleEdit = useCallback((msg) => setEditingMessage(msg), [setEditingMessage]);
-    const handleDelete = useCallback((msgId) => emitDeleteMessage(msgId), [emitDeleteMessage]);
+    const handleDelete = useCallback((msgId) => setPendingDeleteId(msgId), []);
+
+    const confirmDelete = () => {
+        emitDeleteMessage(pendingDeleteId);
+        setPendingDeleteId(null);
+    };
 
     /*
      * Grouping and day boundaries are derived from the message list rather
@@ -534,6 +554,26 @@ const ConversationRoom = ({ conversation }) => {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
         >
+            {pendingDeleteId && (
+                <ConfirmDialog
+                    destructive
+                    title="Delete message?"
+                    description="This deletes the message for everyone in this conversation. It cannot be undone."
+                    confirmLabel="Delete"
+                    onConfirm={confirmDelete}
+                    onClose={() => setPendingDeleteId(null)}
+                />
+            )}
+
+            {/* ✅ Full-size image viewer — replaces opening a new tab */}
+            {lightboxImage && (
+                <ImageLightbox
+                    src={lightboxImage.url}
+                    alt={lightboxImage.name || "Shared image"}
+                    onClose={() => setLightboxImage(null)}
+                />
+            )}
+
             {/* ✅ File Preview Modal */}
             {previewFiles && (
                 <FilePreviewModal
@@ -600,6 +640,7 @@ const ConversationRoom = ({ conversation }) => {
                                         isGroupEnd={isGroupEnd}
                                         onEdit={handleEdit}
                                         onDelete={handleDelete}
+                                        onViewImage={setLightboxImage}
                                     />
                                 </div>
                             ))}

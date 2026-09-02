@@ -18,7 +18,7 @@ const VARIANTS = {
     // Primary action — the send button.
     primary: "text-white bg-brand hover:bg-brand-dark active:bg-brand-dark shadow-bubble",
     // Destructive.
-    danger: "text-red-400 hover:text-red-300 hover:bg-red-500/10",
+    danger: "text-danger hover:bg-danger-soft",
 };
 
 const SIZES = {

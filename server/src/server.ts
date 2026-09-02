@@ -3,12 +3,14 @@ import http from "http";
 import app from "./app";
 
 import { connectDB } from "./config/db";
+import { runMigrations } from "./config/migrations";
 import { env } from "./config/env";
 import { initSocket } from "./socket/socket";
 
 const startServer = async (): Promise<void> => {
     try {
         await connectDB();
+        await runMigrations();
         const server = http.createServer(app);
         initSocket(server);
         server.listen(env.PORT, "0.0.0.0", () => {

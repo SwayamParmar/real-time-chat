@@ -228,6 +228,32 @@ const InputBar = ({ onSend, onFileSelect }) => {
         onFileSelect?.([file]); // ✅ wrap in array — ConversationRoom expects array
     };
 
+    /*
+     * Paste.
+     *
+     * Text needs no handling — the textarea does it natively, and nothing here
+     * interferes with it. Images do: a screenshot on the clipboard arrives as
+     * a file item with no text representation, so pasting one used to be a
+     * no-op. Route it through the same preview modal the attachment menu and
+     * drag-and-drop already use, so captions and send behaviour are identical.
+     *
+     * Only prevented when an image is actually taken, so a paste that mixes
+     * text and images (copying from a rich editor) still inserts its text.
+     */
+    const handlePaste = (e) => {
+        // An edit replaces text only — there is nothing to attach it to.
+        if (editingMessage) return;
+
+        const files = Array.from(e.clipboardData?.files ?? []).filter((file) =>
+            file.type.startsWith("image/")
+        );
+
+        if (!files.length) return;
+
+        e.preventDefault();
+        onFileSelect?.(files);
+    };
+
     const canSend = value.trim().length > 0;
 
     return (
@@ -285,6 +311,7 @@ const InputBar = ({ onSend, onFileSelect }) => {
                     value={value}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
                     placeholder={editingMessage ? "Edit message…" : "Write a message…"}
                     className="flex-1 min-w-0 resize-none min-h-[44px]
                                bg-surface-raised border border-surface-border
@@ -304,10 +331,19 @@ const InputBar = ({ onSend, onFileSelect }) => {
                     size="lg"
                     disabled={!canSend}
                     onClick={handleSend}
-                    // Suppressing the default mousedown stops the button from
-                    // taking focus off the textarea. On touch that is what
-                    // dismissed the keyboard the instant a message was sent.
-                    onMouseDown={(e) => e.preventDefault()}
+                    /*
+                     * No preventDefault here on purpose.
+                     *
+                     * This used to cancel the default on mousedown (and then
+                     * pointerdown) to stop the button stealing focus, so the
+                     * on-screen keyboard would stay up. Cancelling a pointer
+                     * default is exactly what can stop the click that follows
+                     * from ever being dispatched, which is the one failure the
+                     * send button cannot afford. handleSend refocuses the
+                     * composer itself, so the keyboard is preserved anyway —
+                     * without betting the whole action on browser-specific
+                     * event-suppression behaviour.
+                     */
                     className="flex-shrink-0"
                 />
             </div>
