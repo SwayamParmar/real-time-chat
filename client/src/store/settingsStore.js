@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import config from "../config";
+import { toast } from "react-toastify";
 import { useAuthStore } from "./authStore";
 
 const request = (method, body) => {
@@ -16,9 +17,9 @@ const request = (method, body) => {
 };
 
 export const useSettingsStore = create((set, get) => ({
-    // Assume on until the server says otherwise, so the first message after a
-    // reload is not silently dropped while the fetch is in flight.
-    notificationsEnabled: true,
+    // Off until the server says otherwise. Anything else means a tab whose
+    // settings fetch failed would notify while the toggle showed off.
+    notificationsEnabled: false,
     loaded: false,
 
     fetchSettings: async () => {
@@ -28,7 +29,7 @@ export const useSettingsStore = create((set, get) => ({
             if (!res.ok) throw new Error(data.message || "Failed to load settings");
 
             set({
-                notificationsEnabled: data.settings?.notifications_enabled !== false,
+                notificationsEnabled: data.settings?.notifications_enabled === true,
                 loaded: true,
             });
         } catch (error) {
@@ -45,9 +46,14 @@ export const useSettingsStore = create((set, get) => ({
             if (!res.ok) throw new Error("Failed to save setting");
         } catch (error) {
             console.error("Update settings error:", error);
+            toast.error("Could not save your notification setting", {
+                position: "top-right",
+                autoClose: 4000,
+                theme: "colored",
+            });
             set({ notificationsEnabled: previous });
         }
     },
 
-    reset: () => set({ notificationsEnabled: true, loaded: false }),
+    reset: () => set({ notificationsEnabled: false, loaded: false }),
 }));

@@ -37,6 +37,17 @@ const claim = (messageId) => {
  * from a socket event. So the native prompt is raised from a button the user
  * presses, not from the message that triggered this.
  */
+export const requestNotificationPermission = async () => {
+    if (!supported()) return "unsupported";
+    if (Notification.permission !== "default") return Notification.permission;
+
+    try {
+        return await Notification.requestPermission();
+    } catch {
+        return Notification.permission;
+    }
+};
+
 const askOnce = () => {
     if (promptShown) return;
     promptShown = true;
@@ -48,7 +59,7 @@ const askOnce = () => {
                 <button
                     type="button"
                     onClick={() => {
-                        Notification.requestPermission().finally(closeToast);
+                        requestNotificationPermission().finally(closeToast);
                     }}
                     className="px-2.5 py-1 rounded-lg bg-white/20 font-semibold whitespace-nowrap"
                 >
@@ -65,7 +76,7 @@ export const notifyNewMessage = ({ messageId, senderName, body, onClick }) => {
 
     // Checked before the permission prompt, so turning notifications off also
     // stops the app asking for permission it has no use for.
-    if (!useSettingsStore.getState().notificationsEnabled) return;
+    if (useSettingsStore.getState().notificationsEnabled !== true) return;
 
     // Read every time — permission can be revoked in browser settings at any
     // point after it was granted.
