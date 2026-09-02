@@ -5,6 +5,8 @@ import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useThemeStore } from "../../store/themeStore";
 import { useSettingsStore } from "../../store/settingsStore";
+import { requestNotificationPermission } from "../../notifications/notify";
+import { toast } from "react-toastify";
 import { Avatar } from "../chatUtils";
 
 /* ─────────────────────────────────────────────────────────────
@@ -52,6 +54,25 @@ const ProfileMenu = ({ placement = "rail" }) => {
             document.removeEventListener("keydown", onKeyDown);
         };
     }, [open]);
+
+    // Turning the toggle on is a real user gesture, so the native prompt can be
+    // raised straight from here — the toast fallback in notify.js exists only
+    // because a socket event is not a gesture.
+    const handleNotificationsToggle = async () => {
+        const enabled = !notificationsEnabled;
+
+        if (enabled) {
+            const permission = await requestNotificationPermission();
+            if (permission === "denied") {
+                toast.info("Notifications are blocked for this site in your browser settings.", {
+                    position: "top-right",
+                    autoClose: 5000,
+                });
+            }
+        }
+
+        setNotificationsEnabled(enabled);
+    };
 
     const handleLogout = async () => {
         if (signingOut) return;
@@ -117,7 +138,7 @@ const ProfileMenu = ({ placement = "rail" }) => {
                         type="button"
                         role="menuitemcheckbox"
                         aria-checked={notificationsEnabled}
-                        onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                        onClick={handleNotificationsToggle}
                         className="flex items-center gap-2.5 w-full px-3 py-3 text-left text-[12.5px] sm:text-[13px]
                                    text-chat-secondary hover:bg-surface-raised
                                    transition-colors duration-150"

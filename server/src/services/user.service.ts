@@ -30,6 +30,10 @@ export const updateSettings = async (
     if (typeof data.notifications_enabled === "boolean") {
         update.notifications_enabled = data.notifications_enabled;
     }
+    if (Object.keys(update).length === 0) {
+        throw new HttpError(400, "No settings provided.");
+    }
+
     const user = await User.findByIdAndUpdate(userId, update, {
         new: true,
         select: "notifications_enabled",
