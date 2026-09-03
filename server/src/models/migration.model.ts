@@ -6,8 +6,6 @@ export interface Migration extends Document {
 }
 
 const migrationSchema = new Schema<Migration>({
-    // Unique, so an insert doubles as the lock that stops a second instance
-    // running the same one-shot migration.
     name: { type: String, required: true, unique: true },
     appliedAt: { type: Date, default: Date.now },
 });

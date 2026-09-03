@@ -29,9 +29,8 @@ export const formatLastSeen = (lastSeen) => {
 };
 
 /**
- * Day label for the separators between message runs in the chat window.
- * Spelled out rather than numeric, because it is read once per day boundary
- * and needs no scanning: "Today", "Yesterday", "12 Mar", "12 Mar 2024".
+ * Day label for the separators between message runs: "Today", "Yesterday",
+ * "12 Mar", "12 Mar 2024".
  */
 export const formatDateSeparator = (timestamp) => {
     const date = new Date(timestamp);

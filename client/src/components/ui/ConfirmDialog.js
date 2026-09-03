@@ -1,10 +1,7 @@
 import Modal from "./Modal";
 
 /* ─────────────────────────────────────────────────────────────
-   Confirmation prompt for an action that cannot be undone.
-
-   Wraps the shared Modal, so Escape, backdrop dismissal, focus
-   handling and the mobile bottom-sheet layout all come for free.
+   Confirmation prompt, built on the shared Modal.
 ───────────────────────────────────────────────────────────── */
 
 const ConfirmDialog = ({

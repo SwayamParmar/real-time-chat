@@ -3,13 +3,9 @@ import { useCallback } from 'react';
 /* ─────────────────────────────────────────────────────────────
    Shared scroll-reveal observer.
 
-   Every section used to spin up its own IntersectionObserver.
-   This module keeps a single lazily-created observer for the whole
-   page instead, and unobserves each element once it has been
-   revealed so the entry list stays short while scrolling.
-
-   Reveal is a pure CSS class toggle — no React state, so no
-   re-renders are triggered while the user scrolls.
+   One lazily-created IntersectionObserver for the whole page,
+   unobserving each element once it has been revealed. Reveal is
+   a CSS class toggle, so scrolling triggers no re-renders.
 ───────────────────────────────────────────────────────────── */
 
 let observer = null;
@@ -50,7 +46,7 @@ export const useReveal = () =>
 
         const obs = getObserver();
 
-        // No observer support: show the content rather than hiding it forever.
+        // No observer support: show the content rather than hiding it.
         if (!obs) {
             node.classList.add('visible');
             return;

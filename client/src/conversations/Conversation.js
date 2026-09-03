@@ -13,9 +13,8 @@ import { ChatLayoutProvider, useChatLayout } from "./ChatLayoutContext";
    Mobile   (below md)   [ list ]  ⇄  [ room ]
 
    Both panes stay mounted on mobile and are swapped with
-   visibility rather than being conditionally rendered, so
-   returning to the list never discards the room's scroll
-   position or forces its messages to re-render from scratch.
+   visibility rather than conditionally rendered, so the room
+   keeps its scroll position.
 ───────────────────────────────────────────────────────────── */
 
 const ChatShell = () => {
@@ -37,21 +36,13 @@ const ChatShell = () => {
     }, []);
 
     /*
-     * Escape closes the open conversation, on every screen size — but "close"
-     * means two different things:
+     * Escape closes the open conversation:
      *
-     *   below md  the room is a pane stacked over the list, so Escape backs
-     *             out to the list and deliberately leaves the conversation
-     *             loaded, exactly like the header's back arrow
-     *   md and up both panes are always visible, so there is nothing to back
-     *             out to — Escape deselects instead, which is the only thing
-     *             closing can mean there
+     *   below md  backs out to the list, leaving it loaded
+     *   md and up deselects, since both panes are always visible
      *
-     * The earlier version bound this only while the room pane was open on a
-     * phone, which is why it did nothing on desktop.
-     *
-     * Deferred to whatever is layered on top: a dialog, an open menu, or an
-     * edit in progress all own Escape first and handle it themselves.
+     * Deferred to anything layered on top — a dialog, an open menu or an edit
+     * in progress handles Escape first.
      */
     useEffect(() => {
         const onKeyDown = (e) => {
@@ -59,8 +50,8 @@ const ChatShell = () => {
             if (useChatStore.getState().editingMessage) return;
             if (document.querySelector('[role="dialog"], [role="menu"]')) return;
 
-            // Read at keypress time — nothing here needs to re-render when the
-            // viewport crosses the breakpoint.
+            // Read at keypress time, so crossing the breakpoint does not
+            // re-render.
             if (window.matchMedia("(min-width: 768px)").matches) {
                 closeConversation();
                 return;
@@ -79,9 +70,8 @@ const ChatShell = () => {
     );
 
     return (
-        // h-app is 100dvh with a 100vh fallback: on phones the old h-screen
-        // measured the viewport as if the URL bar were hidden, so the composer
-        // sat below the fold and the keyboard pushed it further out of reach.
+        // h-app is 100dvh with a 100vh fallback, so the composer stays above
+        // the fold on phones.
         <div className="h-app w-full flex overflow-hidden bg-surface-base">
             <ConversationNav />
 

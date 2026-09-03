@@ -3,11 +3,8 @@ import React from "react";
 /* ─────────────────────────────────────────────────────────────
    Avatar + presence.
 
-   Every avatar in the app used to be hardcoded to one purple
-   (#7C6FCD, a colour in neither palette), so a list of ten people
-   was ten identical circles. The tint is now derived from the
-   user's id, which means it is stable across sessions, devices
-   and re-renders without any state or API involvement.
+   The tint is derived from the user's id, so it is stable across
+   sessions and devices without any state or API involvement.
 ───────────────────────────────────────────────────────────── */
 
 const PALETTE = [
@@ -38,8 +35,7 @@ const initialsFor = (name = "") => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-// One scale, used everywhere. Sizes were previously 30 / 40 / 42 / 80 with
-// no relationship to each other.
+// One size scale, used everywhere.
 const SIZES = {
     xs: { box: "w-8 h-8", text: "text-[11px]", dot: "w-2.5 h-2.5", ring: "1.5px" },
     sm: { box: "w-10 h-10", text: "text-[13px]", dot: "w-3 h-3", ring: "1.5px" },

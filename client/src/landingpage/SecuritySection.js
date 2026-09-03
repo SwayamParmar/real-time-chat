@@ -2,8 +2,7 @@ import React from 'react';
 import { FiKey, FiHash, FiCheckSquare, FiGlobe, FiFilter, FiTerminal } from 'react-icons/fi';
 import useReveal from './useReveal';
 
-/* Every item below maps to a measure that exists in the codebase — nothing
-   aspirational. See the Security section of the repository README. */
+/* See the Security section of the repository README. */
 const MEASURES = [
     {
         Icon: FiKey,

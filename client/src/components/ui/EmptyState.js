@@ -2,10 +2,6 @@ import React from "react";
 
 /* ─────────────────────────────────────────────────────────────
    Empty / zero-result state.
-
-   One shape for "no conversation selected", "no messages yet",
-   "no conversations", "no users found" — previously four
-   different ad-hoc layouts.
 ───────────────────────────────────────────────────────────── */
 
 const EmptyState = ({ icon: Icon, title, description, action, compact = false }) => (

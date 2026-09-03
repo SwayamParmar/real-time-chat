@@ -9,19 +9,13 @@ const PAGE_SIZE = 20;
 
 const timeOf = (message) => {
     const value = new Date(message?.createdAt).getTime();
-    // A message with no usable timestamp is one the client just created
-    // (an optimistic upload), so treat it as the newest thing there is.
+    // No timestamp means an optimistic upload the client just created.
     return Number.isNaN(value) ? Infinity : value;
 };
 
 /**
- * Fold a freshly fetched page 1 together with whatever is already on screen.
- *
- * The response describes the conversation as of the moment the request left,
- * so anything that arrived while it was in flight is missing from it. Keeping
- * local messages that are at least as new as the newest one the server
- * returned restores exactly those, without resurrecting older cached history
- * that has since fallen off page 1.
+ * Merge a freshly fetched page 1 with the messages already on screen, keeping
+ * anything local that arrived while the request was in flight.
  */
 const mergeInFlightMessages = (fetched, local) => {
     if (!local?.length) return fetched;
@@ -52,18 +46,8 @@ export const useChatStore = create((set, get) => ({
     editingMessage: null,
     pendingUploads: {}, // { tempId: { file, progress, conversationId, caption } }
 
-    /*
-     * Last known messages per conversation, so re-opening one paints instantly
-     * instead of waiting on the network. Purely a rendering shortcut: the
-     * request still goes out every time and its response is authoritative, so
-     * a cache entry can never be the reason something is out of date.
-     *
-     * Written only when leaving a conversation (see fetchMessages), which
-     * snapshots whatever is on screen at that moment — socket updates
-     * included. That keeps every real-time handler below untouched.
-     *
-     * In memory only: never persisted, and cleared by reset() on sign-out.
-     */
+    // Render cache so re-opening a conversation paints instantly. Written on
+    // leaving a conversation; the fetch still runs and its response wins.
     messagesByConversation: {}, // { conversationId: Message[] }
 
     // INIT SOCKET
@@ -85,16 +69,9 @@ export const useChatStore = create((set, get) => ({
         socket.off("messagesSeen");
         socket.off("messagesDelivered");
         socket.off("messageError");
-        // Deliberately not connect/disconnect: socketClient owns handlers for
-        // those too, and off() would take its heartbeat down with ours.
+        // Not connect/disconnect: socketClient owns those handlers.
 
-        /*
-         * The server has always emitted messageError when a send is refused —
-         * nothing has ever listened for it. A rejected send therefore did
-         * exactly nothing on screen: the composer cleared, no message
-         * appeared, and no error was raised anywhere the user or the console
-         * would show it. Any future "send does nothing" now says why.
-         */
+        // Surface refused sends instead of failing silently.
         socket.on("messageError", ({ message, tempId }) => {
             console.error("Send failed:", message);
             toast.error(message || "Message could not be sent", {
@@ -141,21 +118,9 @@ export const useChatStore = create((set, get) => ({
                 }
             }
 
-            /*
-             * Move the conversation to the top of the list with its new last
-             * message.
-             *
-             * Matched on the normalised msgConvId. This block used to compare
-             * the raw message.conversationId, which the rest of the handler
-             * already knew could arrive either as a plain id or as a populated
-             * object — so a populated payload matched nothing here.
-             *
-             * A miss also used to be silently destructive: find() returned
-             * undefined and it was spread in as the first element, putting a
-             * hole in the list that the renderer would then crash on. That is
-             * reachable now that a message can arrive for a conversation the
-             * recipient has never opened.
-             */
+            // Move the conversation to the top of the list with its new last
+            // message. Matched on the normalised msgConvId, since the payload
+            // may carry conversationId as an id or as a populated object.
             set((state) => {
                 const existing = state.conversations.find((conv) => conv._id === msgConvId);
                 if (!existing) return state;
@@ -168,21 +133,14 @@ export const useChatStore = create((set, get) => ({
                 };
             });
 
-            /*
-             * First message of a conversation the recipient does not have yet:
-             * there is no local record to reorder, so pull the list. Only
-             * reachable for a genuinely unknown conversation, which is the
-             * moment someone starts a new chat with you.
-             */
+            // Unknown conversation (someone just started a new chat): there is
+            // nothing local to reorder, so pull the list.
             if (msgConvId && !get().conversations.some((conv) => conv._id === msgConvId)) {
                 get().fetchConversations();
             }
 
-            /*
-             * Notify unless the recipient is already looking at this chat.
-             * Reading visibilityState live covers the "open in a background
-             * tab" case, which activeConversationId alone cannot see.
-             */
+            // Notify unless the recipient is looking at this chat. Checking
+            // visibilityState covers the background-tab case.
             const { user } = useAuthStore.getState();
             const isMine = message.sender?._id === user?.id;
             const isWatching =
@@ -223,8 +181,6 @@ export const useChatStore = create((set, get) => ({
                     m._id === updatedMessage._id ? updatedMessage : m
                 ),
                 // Editing the newest message changes what the list previews.
-                // This handler only touched `messages` before, so the row kept
-                // showing the pre-edit text until the next full refetch.
                 conversations: state.conversations.map((conv) =>
                     conv.lastMessage?._id === updatedMessage._id
                         ? { ...conv, lastMessage: updatedMessage }
@@ -241,13 +197,8 @@ export const useChatStore = create((set, get) => ({
             }));
         });
 
-        /*
-         * `lastMessage` on the payload is the conversation's authoritative
-         * preview *after* the delete — the previous surviving message, or null
-         * when that was the only one. It used to be derived locally by marking
-         * the existing lastMessage isDeleted, which left the row stuck on a
-         * message that no longer exists.
-         */
+        // `lastMessage` on the payload is the preview after the delete: the
+        // previous surviving message, or null if that was the only one.
         socket.on("messageDeleted", ({ messageId, conversationId, lastMessage }) => {
             set((state) => ({
                 // ✅ update messages list
@@ -260,9 +211,7 @@ export const useChatStore = create((set, get) => ({
                         ? { ...conv, lastMessage: lastMessage ?? null }
                         : conv
                 ),
-                // The cached copy of this conversation has to move with the
-                // live list, or re-opening the chat would paint the message
-                // back as undeleted until the fetch returns.
+                // Keep the render cache in step with the live list.
                 messagesByConversation: state.messagesByConversation[conversationId]
                     ? {
                           ...state.messagesByConversation,
@@ -288,12 +237,8 @@ export const useChatStore = create((set, get) => ({
             }));
         });
 
-        /*
-         * Per-user presence transition. The roster above answers "who is
-         * online" but carries no timestamp, so `lastSeen` stayed frozen at
-         * whatever fetchConversations happened to load and the room header
-         * showed a stale — or missing — "Last seen". This carries it.
-         */
+        // Per-user presence transition. The roster above carries no timestamp,
+        // so this is what keeps lastSeen current.
         socket.on("presenceUpdate", ({ userId, isOnline, lastSeen }) => {
             set((state) => ({
                 onlineUsers: isOnline
@@ -350,11 +295,8 @@ export const useChatStore = create((set, get) => ({
             }));
         });
 
-        /*
-         * Nothing is emitted here on purpose. Socket.IO buffers emits made
-         * while disconnected and replays them on reconnect, so a leave sent
-         * from this handler would arrive right as we are rejoining.
-         */
+        // Nothing is emitted here: Socket.IO replays buffered emits on
+        // reconnect, so a leave would arrive just as we rejoin.
         let wasDisconnected = false;
         socket.on("disconnect", () => {
             wasDisconnected = true;
@@ -367,18 +309,11 @@ export const useChatStore = create((set, get) => ({
         });
     },
 
-    /*
-     * Pull everything back in line after a gap in the connection.
-     *
-     * A reconnect gets a brand-new server-side socket: it is put back into
-     * `user:<id>` automatically, but its conversation rooms are gone and every
-     * event sent while we were away is simply lost. Rejoining alone left the
-     * list and the open thread stale until the user switched conversations.
-     */
+    // Resync after a gap in the connection. A reconnect gets a new server-side
+    // socket, so conversation rooms have to be rejoined and state refetched.
     resync: () => {
         const { activeConversationId } = get();
-        // Anyone mid-keystroke when we dropped would otherwise stay "typing…"
-        // forever, since their stopTyping went to the old socket.
+        // Their stopTyping went to the old socket, so clear it here.
         set({ typingUsers: {} });
         get().fetchConversations();
         // fetchMessages rejoins the room and marks as read on its way through.
@@ -476,24 +411,10 @@ export const useChatStore = create((set, get) => ({
         }
         socket?.emit("joinConversation", conversationId);
 
-        /*
-         * Re-selecting the conversation that is already open is a no-op.
-         *
-         * Every caller used to run straight through to the network, so each
-         * extra click on the active row refired the request — and, since a
-         * page-1 load clears `messages` first, visibly blanked a thread that
-         * was already correct. Its messages are kept live by the socket, so
-         * refetching would only replace an up-to-date list with an identical
-         * one.
-         *
-         * The guard sits *after* the room join above, so re-selecting still
-         * re-asserts socket membership — the one useful side effect of the
-         * old behaviour is kept.
-         *
-         * Deliberately not skipped when the conversation is active but has no
-         * messages and nothing is in flight: that is what a failed request
-         * leaves behind, and retrying by tapping the row again should work.
-         */
+        // Re-selecting the conversation that is already open is a no-op; the
+        // socket keeps its messages live. The guard sits after the room join
+        // so re-selecting still re-asserts membership. An active conversation
+        // with no messages still refetches, so a failed load can be retried.
         const reselectingOpenConversation =
             page === 1 &&
             prevConvId === conversationId &&
@@ -501,35 +422,20 @@ export const useChatStore = create((set, get) => ({
 
         if (reselectingOpenConversation && !force) return;
 
-        /*
-         * Mark the conversation active BEFORE awaiting the network.
-         *
-         * The room pane is derived from activeConversationId, so setting it
-         * only once the response landed meant the entire round trip was spent
-         * showing "No conversation selected" — the skeleton could not even
-         * render, because the room had not mounted yet. Opening a conversation
-         * now paints its header, composer and skeleton on the next frame and
-         * fills in the messages when they arrive.
-         *
-         * Page 1 also drops the previous conversation's messages, which
-         * otherwise sat under the new header until the fetch resolved.
-         */
+        // Mark the conversation active before awaiting the network, so the
+        // room pane can paint its header, composer and skeleton right away.
+        // Page 1 also drops the previous conversation's messages.
         if (page === 1) {
             const state = get();
 
-            /*
-             * Snapshot the conversation being left. Capped to one page: the
-             * revalidation below replaces messages with the newest page, so
-             * caching more would show extra history for a moment and then have
-             * it vanish when the response lands.
-             */
+            // Snapshot the conversation being left, capped to one page to match
+            // what the revalidation below will replace it with.
             const outgoing =
                 prevConvId && prevConvId !== conversationId && state.messages.length
                     ? { [prevConvId]: state.messages.slice(-PAGE_SIZE) }
                     : null;
 
-            // Stale: show what we already have. Revalidate: the fetch below
-            // still runs and overwrites this with the server's version.
+            // Show the cached copy; the fetch below overwrites it.
             const cached = state.messagesByConversation[conversationId];
 
             set({
@@ -537,19 +443,10 @@ export const useChatStore = create((set, get) => ({
                 messages: cached ?? [],
                 page: 1,
                 hasMore: true,
-                /*
-                 * An unfinished edit does not survive leaving the conversation
-                 * it belongs to. It is global store state, so it used to: the
-                 * composer in the *next* conversation stayed in edit mode, and
-                 * pressing send there edited the old message instead of
-                 * sending a new one — silently, since nothing about the new
-                 * conversation changed on screen.
-                 */
+                // editingMessage is global state, so clear it on the way out.
                 ...(prevConvId !== conversationId ? { editingMessage: null } : null),
-                // Kept true even when serving from cache, so the auto-pagination
-                // effect cannot fire a page-2 request that the in-flight page-1
-                // revalidation would then throw away. The room shows no spinner
-                // for it — see ConversationRoom — so the refresh is silent.
+                // Kept true when serving from cache so auto-pagination cannot
+                // fire a page 2 while page 1 is still revalidating.
                 loadingMessages: true,
                 ...(outgoing
                     ? { messagesByConversation: { ...state.messagesByConversation, ...outgoing } }
@@ -559,13 +456,8 @@ export const useChatStore = create((set, get) => ({
             set({ loadingMessages: true });
         }
 
-        /*
-         * Wrapped so a failed request cannot strand loadingMessages at true.
-         * That matters more than it used to: activeConversationId is set
-         * before the await, so a stuck flag combined with the guard above
-         * would make the conversation permanently unopenable. Matches the
-         * error handling fetchConversations and fetchUsers already use.
-         */
+        // Wrapped so a failed request cannot strand loadingMessages at true,
+        // which would leave the conversation unopenable.
         try {
             const res = await fetch(
                 `${config.API_BASE_URL}/messages/${conversationId}?page=${page}&limit=${PAGE_SIZE}`, {
@@ -578,26 +470,13 @@ export const useChatStore = create((set, get) => ({
             );
             const data = await res.json();
 
-            /*
-             * Switching conversations is instant now, so two opens can easily
-             * be in flight at once. Drop a response whose conversation is no
-             * longer the one on screen, rather than letting the slower request
-             * overwrite the newer one's messages.
-             */
+            // Two opens can be in flight at once, so drop a response whose
+            // conversation is no longer the one on screen.
             if (get().activeConversationId !== conversationId) return;
 
             set((state) => {
-                /*
-                 * A page-1 response is a snapshot of the moment the request was
-                 * issued, so it cannot know about anything that arrived while
-                 * it was in flight. Replacing outright therefore silently
-                 * deleted a message sent during that window — invisibly in an
-                 * empty conversation, where the response is [] and the message
-                 * simply vanished with no error anywhere.
-                 *
-                 * Anything held locally that the server did not return is kept
-                 * and re-appended in arrival order.
-                 */
+                // Merge rather than replace, so a message that arrived while
+                // page 1 was in flight is kept and re-appended in order.
                 const merged =
                     page === 1
                         ? mergeInFlightMessages(data.messages ?? [], state.messages)
@@ -620,24 +499,15 @@ export const useChatStore = create((set, get) => ({
         } catch (error) {
             console.error("Fetch messages error:", error);
         } finally {
-            // Only for the conversation still on screen: a stale response must
-            // not clear the newer one's loading state.
+            // Only for the conversation still on screen.
             if (get().activeConversationId === conversationId) {
                 set({ loadingMessages: false });
             }
         }
     },
 
-    /*
-     * Deselect the open conversation, returning the room pane to its
-     * "no conversation selected" state.
-     *
-     * Distinct from the mobile back gesture, which only hides the room pane
-     * and deliberately keeps it loaded. From md up there is no pane to hide —
-     * both are always on screen — so closing has to mean clearing the
-     * selection. The messages are snapshotted on the way out, exactly as
-     * switching conversations does, so re-opening still paints instantly.
-     */
+    // Deselect the open conversation. Distinct from the mobile back gesture,
+    // which only hides the room pane and keeps it loaded.
     closeConversation: () => {
         const { activeConversationId, messages } = get();
         if (!activeConversationId) return;
@@ -822,11 +692,8 @@ export const useChatStore = create((set, get) => ({
         });
     },
 
-    // Drop every trace of the signed-in session. Called on logout.
-    //
-    // socketInitialized is the important one: initSocket() short-circuits on
-    // it, so without a reset the next sign-in would attach no listeners at all
-    // and the app would look connected while receiving nothing.
+    // Clear the signed-in session. socketInitialized matters most: initSocket()
+    // short-circuits on it, so the next sign-in would attach no listeners.
     reset: () => set({
         conversations: [],
         users: [],
@@ -843,8 +710,8 @@ export const useChatStore = create((set, get) => ({
         typingUsers: {},
         editingMessage: null,
         pendingUploads: {},
-        // Must be cleared with the rest: otherwise one account's messages
-        // would still be in memory for whoever signs in next on this tab.
+        // Cleared so one account's messages are not left in memory for the
+        // next person to sign in on this tab.
         messagesByConversation: {},
     }),
 }));

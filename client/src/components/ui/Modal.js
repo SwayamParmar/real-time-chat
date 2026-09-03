@@ -6,21 +6,10 @@ import IconButton from "./IconButton";
 /* ─────────────────────────────────────────────────────────────
    Modal / bottom sheet.
 
-   Presentational only — it owns no application state and decides
-   nothing about what it contains. It just supplies the behaviour
-   every dialog is expected to have and none of ours had:
-
-     • Escape closes it
-     • clicking the backdrop closes it
-     • background scroll is locked while it is open
-     • focus moves in on open and returns to the trigger on close
-     • Tab is trapped inside it
-     • role="dialog" + aria-modal + a labelled title
-     • on phones it docks to the bottom as a sheet instead of
-       floating a fixed-width card that overflows a 320px screen
-
-   Rendered through a portal so it is never clipped by a parent's
-   overflow:hidden — the old dialog lived inside the chat pane.
+   Handles Escape and backdrop dismissal, scroll lock, focus
+   trapping and restoration, dialog roles, and the phone bottom
+   sheet layout. Rendered through a portal so a parent's
+   overflow:hidden cannot clip it.
 ───────────────────────────────────────────────────────────── */
 
 const FOCUSABLE =
@@ -61,13 +50,8 @@ const Modal = ({ open = true, onClose, title, description, children, footer }) =
         [onClose]
     );
 
-    /*
-     * Mobile keyboards resize the *visual* viewport, not the layout viewport.
-     * A position:fixed sheet therefore keeps its full height and its lower half
-     * — including whatever the user just focused — ends up behind the keyboard.
-     * Pinning the overlay to the visual viewport makes the sheet ride up with
-     * the keyboard the way a native bottom sheet does.
-     */
+    // Mobile keyboards resize the visual viewport, not the layout viewport, so
+    // pin the overlay to it and let the sheet ride up with the keyboard.
     const [viewport, setViewport] = useState(null);
 
     useEffect(() => {
@@ -122,8 +106,7 @@ const Modal = ({ open = true, onClose, title, description, children, footer }) =
                        flex items-end sm:items-center justify-center
                        bg-black/70 backdrop-blur-sm animate-fade-in
                        p-0 sm:p-6"
-            // Backdrop click. The check keeps clicks that originate inside the
-            // panel — including a drag that ends on the backdrop — from closing.
+            // Only a click that starts on the backdrop dismisses.
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget) onClose?.();
             }}
@@ -136,9 +119,8 @@ const Modal = ({ open = true, onClose, title, description, children, footer }) =
                 aria-describedby={description ? descId : undefined}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
-                // max-h-full rather than a dvh value: the overlay is already
-                // sized to the visual viewport above, so the sheet shrinks with
-                // the keyboard instead of extending behind it.
+                // max-h-full, not dvh: the overlay is already sized to the
+                // visual viewport above.
                 className="w-full sm:max-w-[440px] flex flex-col outline-none
                            bg-surface-panel border border-surface-border
                            rounded-t-2xl sm:rounded-2xl shadow-panel

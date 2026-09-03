@@ -14,14 +14,13 @@ import { Avatar } from "../chatUtils";
 
    One component, two homes: the desktop nav rail (menu opens to
    the right, anchored to the bottom) and the mobile list header
-   (menu drops down from the right edge). Before this the avatar
-   was decorative and there was no way to sign out at all.
+   (menu drops down from the right edge).
 ───────────────────────────────────────────────────────────── */
 
 const PLACEMENTS = {
-    // Bottom of the 64px rail — the menu flies out to the right.
+    // Bottom of the 64px rail; the menu flies out to the right.
     rail: "left-full bottom-0 ml-2 origin-bottom-left",
-    // Top-right of the mobile list header — the menu drops down.
+    // Top-right of the mobile list header; the menu drops down.
     header: "right-0 top-full mt-2 origin-top-right",
 };
 
@@ -55,9 +54,8 @@ const ProfileMenu = ({ placement = "rail" }) => {
         };
     }, [open]);
 
-    // Turning the toggle on is a real user gesture, so the native prompt can be
-    // raised straight from here — the toast fallback in notify.js exists only
-    // because a socket event is not a gesture.
+    // Turning the toggle on is a real user gesture, so the native prompt can
+    // be raised from here.
     const handleNotificationsToggle = async () => {
         const enabled = !notificationsEnabled;
 
@@ -78,15 +76,13 @@ const ProfileMenu = ({ placement = "rail" }) => {
         if (signingOut) return;
         setSigningOut(true);
 
-        // Clear the chat session before the auth session, so no listener or
-        // pending fetch is left holding a token that is about to be discarded.
+        // Clear the chat session before the auth session, so nothing is left
+        // holding a token that is about to be discarded.
         resetChat();
         resetSettings();
         await logout();
 
-        // Straight to the sign-in screen rather than the marketing landing
-        // page — someone who just signed out is far more likely to want back in
-        // than to want the product pitch. replace:true keeps the chat out of
+        // Straight to the sign-in screen. replace:true keeps the chat out of
         // the back-button history.
         navigate("/login", { replace: true });
     };
@@ -99,8 +95,7 @@ const ProfileMenu = ({ placement = "rail" }) => {
                 aria-label={user?.name ? `Account menu for ${user.name}` : "Account menu"}
                 aria-expanded={open}
                 aria-haspopup="menu"
-                // 44px of hit area on touch around a 32px avatar; trimmed back
-                // to the avatar's own size from md up, where a mouse points.
+                // 44px of hit area on touch around a 32px avatar.
                 className="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center
                            rounded-full group/pf"
             >

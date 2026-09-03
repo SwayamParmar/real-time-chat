@@ -1,14 +1,8 @@
 /* ─────────────────────────────────────────────────────────────
    Chat-specific presentational bits.
 
-   Avatar / StatusDot moved to components/ui/Avatar so every
-   surface shares one size scale; they are re-exported here so
-   existing imports keep working.
-
-   GlobalStyles used to live here and injected a <style> tag at
-   runtime that reset the body background to a third colour and
-   redefined the scrollbar with values that disagreed with
-   index.css. All of that now lives in index.css instead.
+   Avatar / StatusDot live in components/ui/Avatar and are
+   re-exported here so existing imports keep working.
 ───────────────────────────────────────────────────────────── */
 
 import { Avatar } from "../components/ui/Avatar";

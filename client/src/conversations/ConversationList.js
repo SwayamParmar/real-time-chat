@@ -13,16 +13,14 @@ import { FiMessageCircle, FiSearch } from "react-icons/fi";
 /* ─────────────────────────────────────────────────────────────
    Conversation list.
 
-   Search filters the conversations already held in memory — it
-   is presentation over data the store has fetched, and issues no
-   request of its own. The input existed before with its state
-   commented out, so it looked usable and did nothing.
+   Search filters the conversations already held in memory and
+   issues no request of its own.
 ───────────────────────────────────────────────────────────── */
 
 const ConversationRow = ({ conv, otherUser, isActive, isOnline, isTyping, onOpen }) => {
     const { text, icon: PreviewIcon } = lastMessagePreview(conv.lastMessage);
-    // "No messages" is a placeholder, not content — set it apart from a real
-    // preview the same way the deleted-message row used to be.
+    // "No messages" is a placeholder, so it is styled apart from a real
+    // preview.
     const empty = !conv.lastMessage;
     const unread = conv.unreadCount > 0;
     const timestamp = conv.lastMessage?.createdAt;
@@ -118,8 +116,8 @@ const ConversationList = () => {
 
     const [search, setSearch] = useState("");
 
-    // Pair each conversation with the participant it is with, once, so a row
-    // does not re-scan the participants array on every render pass.
+    // Pair each conversation with its other participant once, so a row does
+    // not re-scan the participants array on every render.
     const rows = useMemo(
         () =>
             conversations.map((conv) => ({
@@ -139,7 +137,6 @@ const ConversationList = () => {
     );
 
     const handleOpen = (conversationId) => {
-        // Unchanged store call — the mobile pane switch is purely additive.
         fetchMessages(conversationId);
         openRoom();
     };

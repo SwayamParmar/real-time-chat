@@ -1,7 +1,6 @@
 import React from 'react';
 
-/* Figures are grounded in what the codebase actually does, rather than
-   generic marketing numbers. */
+/* Figures reflect what the app actually does. */
 const STATS = [
     { num: '<50', suffix: 'ms', label: 'Message Latency' },
     { num: '3', suffix: '-stage', label: 'Delivery Receipts' },
@@ -35,9 +34,7 @@ const StatItem = ({ num, suffix, label }) => (
 );
 
 /* Each tile carries its own 1px ring and the grid gap is 1px, so adjacent
-   rings meet to form shared rules. Dividers therefore re-flow correctly at
-   every breakpoint, and a half-empty final row leaves no stray block —
-   which a "container background shows through the gap" approach would. */
+   rings meet to form shared rules that re-flow at every breakpoint. */
 const StatsStrip = () => (
     <div
         className="px-5 sm:px-6 py-8 sm:py-9"

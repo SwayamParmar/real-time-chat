@@ -18,8 +18,8 @@ const Header = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const scrolledRef = useRef(false);
 
-    // Passive listener, and state is only written when the boolean actually
-    // flips — so scrolling does not re-render the header on every frame.
+    // Passive listener, and state is only written when the boolean flips, so
+    // scrolling does not re-render the header on every frame.
     useEffect(() => {
         const handleScroll = () => {
             const next = window.scrollY > 40;

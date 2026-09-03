@@ -3,17 +3,9 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 /* ─────────────────────────────────────────────────────────────
    Which pane the phone is showing.
 
-   This is purely presentational and deliberately separate from
-   the chat store: opening a conversation still goes through
-   fetchMessages / activeConversationId exactly as before, and
-   going "back" to the list does NOT clear the active
-   conversation — the room stays mounted and joined, so the
-   socket room membership, the loaded page and the scroll
-   position all survive the trip, the same way a native
-   messaging app behaves.
-
-   Above the md breakpoint the value is ignored: both panes are
-   always visible and this state has no effect.
+   Going "back" to the list does not clear the active
+   conversation, so the room stays mounted and joined. Ignored
+   above md, where both panes are always visible.
 ───────────────────────────────────────────────────────────── */
 
 const ChatLayoutContext = createContext(null);

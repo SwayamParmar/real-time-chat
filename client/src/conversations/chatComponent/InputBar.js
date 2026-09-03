@@ -6,12 +6,8 @@ import IconButton from "../../components/ui/IconButton";
 /* ─────────────────────────────────────────────────────────────
    Message composer.
 
-   Typing / edit / send behaviour is untouched: the same store
-   actions fire on the same events, Enter still sends. What
-   changed is the shell around them — a textarea that grows with
-   the message instead of a one-line input, real buttons instead
-   of bare <svg onClick>, and padding that clears the home
-   indicator when the keyboard is up.
+   A textarea that grows with the message, with padding that
+   clears the home indicator when the keyboard is up.
 ───────────────────────────────────────────────────────────── */
 
 const ATTACHMENT_OPTIONS = [
@@ -36,7 +32,7 @@ const ATTACHMENT_OPTIONS = [
     },
 ];
 
-// Roughly six lines of text before the composer stops growing and scrolls.
+// Roughly six lines before the composer stops growing and scrolls.
 const MAX_COMPOSER_HEIGHT = 148;
 
 // ✅ Attachment menu — a popover on desktop, a bottom sheet on phones
@@ -162,8 +158,7 @@ const InputBar = ({ onSend, onFileSelect }) => {
         }
     }, [editingMessage]);
 
-    // Auto-size the textarea to its content, before paint, so the composer
-    // never flashes at the wrong height as a message wraps onto a new line.
+    // Auto-size the textarea to its content before paint.
     useLayoutEffect(() => {
         const el = inputRef.current;
         if (!el) return;
@@ -192,20 +187,15 @@ const InputBar = ({ onSend, onFileSelect }) => {
         }
         setValue("");
 
-        /*
-         * Keep the composer focused so the on-screen keyboard stays up for the
-         * next message, the way a native messaging app behaves. Emptying the
-         * field flips the send button to disabled, and a browser blurs a
-         * newly-disabled element — which closed the keyboard mid-conversation.
-         */
+        // Keep the composer focused so the on-screen keyboard stays up.
+        // Emptying the field disables the send button, and browsers blur a
+        // newly-disabled element.
         inputRef.current?.focus();
     };
 
     const handleKeyDown = useCallback(
         (e) => {
-            // Enter sends, as it always has. Shift+Enter is the escape hatch
-            // for a deliberate newline, which the old single-line input
-            // could not express at all.
+            // Enter sends; Shift+Enter inserts a newline.
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
@@ -229,19 +219,13 @@ const InputBar = ({ onSend, onFileSelect }) => {
     };
 
     /*
-     * Paste.
-     *
-     * Text needs no handling — the textarea does it natively, and nothing here
-     * interferes with it. Images do: a screenshot on the clipboard arrives as
-     * a file item with no text representation, so pasting one used to be a
-     * no-op. Route it through the same preview modal the attachment menu and
-     * drag-and-drop already use, so captions and send behaviour are identical.
-     *
-     * Only prevented when an image is actually taken, so a paste that mixes
-     * text and images (copying from a rich editor) still inserts its text.
+     * Paste. Text is handled natively by the textarea. An image on the
+     * clipboard is routed through the same preview modal the attachment menu
+     * and drag-and-drop use, and only then is the default prevented, so a
+     * paste mixing text and images still inserts its text.
      */
     const handlePaste = (e) => {
-        // An edit replaces text only — there is nothing to attach it to.
+        // An edit replaces text only.
         if (editingMessage) return;
 
         const files = Array.from(e.clipboardData?.files ?? []).filter((file) =>
@@ -332,17 +316,10 @@ const InputBar = ({ onSend, onFileSelect }) => {
                     disabled={!canSend}
                     onClick={handleSend}
                     /*
-                     * No preventDefault here on purpose.
-                     *
-                     * This used to cancel the default on mousedown (and then
-                     * pointerdown) to stop the button stealing focus, so the
-                     * on-screen keyboard would stay up. Cancelling a pointer
-                     * default is exactly what can stop the click that follows
-                     * from ever being dispatched, which is the one failure the
-                     * send button cannot afford. handleSend refocuses the
-                     * composer itself, so the keyboard is preserved anyway —
-                     * without betting the whole action on browser-specific
-                     * event-suppression behaviour.
+                     * No preventDefault here: cancelling a pointer default can
+                     * stop the click that follows from being dispatched.
+                     * handleSend refocuses the composer itself, so the keyboard
+                     * is preserved anyway.
                      */
                     className="flex-shrink-0"
                 />

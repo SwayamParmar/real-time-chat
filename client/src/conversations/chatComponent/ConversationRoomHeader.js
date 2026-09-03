@@ -15,12 +15,8 @@ import { formatLastSeen } from "../../timeFormat/formatTimestamp";
 /* ─────────────────────────────────────────────────────────────
    Room header.
 
-   The call / video / search / overflow icons were previously
-   bare <svg> elements: no button semantics, no label, no focus,
-   no keyboard access — and no behaviour behind them either.
-   They are real disabled buttons now, so they are announced and
-   presented honestly as not-yet-available rather than looking
-   live and silently doing nothing.
+   The call / video / search / overflow actions have nothing
+   behind them yet, so they render as disabled buttons.
 ───────────────────────────────────────────────────────────── */
 
 const ACTIONS = [
@@ -82,8 +78,7 @@ const ConversationRoomHeader = ({ user }) => {
                         label={`${label} (coming soon)`}
                         icon={icon}
                         disabled
-                        // Voice and video are desktop-only chrome for now; on a
-                        // phone the header space is better spent on the name.
+                        // Voice and video are desktop-only for now.
                         className="hidden sm:inline-flex"
                     />
                 ))}

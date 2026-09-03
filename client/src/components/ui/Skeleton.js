@@ -1,11 +1,7 @@
 import React from "react";
 
 /* ─────────────────────────────────────────────────────────────
-   Skeletons.
-
-   These stand in for content that is genuinely in flight — they
-   are driven by the same loading flags the spinners used, so
-   nothing here fakes work that is not happening.
+   Loading skeletons.
 ───────────────────────────────────────────────────────────── */
 
 /** A single shimmering block. */
@@ -21,8 +17,7 @@ export const Skeleton = ({ className = "" }) => (
     </span>
 );
 
-// Varying widths, so the placeholder reads as a list of different people
-// rather than as one repeating pattern.
+// Varying widths, so the rows do not read as one repeating pattern.
 const NAME_WIDTHS = ["w-28", "w-20", "w-32", "w-24"];
 const LINE_WIDTHS = ["w-3/5", "w-4/5", "w-2/5", "w-3/4"];
 

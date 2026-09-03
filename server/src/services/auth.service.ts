@@ -46,13 +46,6 @@ export const login = async (
 
     const user = await User.findOne({ email });
 
-    /*
-     * "No such account" and "wrong password" are told apart on purpose. The
-     * usual argument against it is email enumeration — but GET /api/user
-     * already hands every signed-in client the name and email of every user,
-     * so there is nothing here left to protect, and "please sign up first" is
-     * a far more useful answer than a blanket "invalid credentials".
-     */
     if (!user) {
         throw new HttpError(404, "No account found with this email. Please sign up first.");
     }
@@ -75,23 +68,8 @@ export const login = async (
         },
     };
 };
-/**
- * Sign the current user out.
- *
- * The access token is a stateless JWT, so there is nothing server-side to
- * invalidate — the client discards it and the signature simply stops being
- * presented. What the server *is* responsible for is the presence record:
- * without this, a user who signs out stays "online" until their JWT expires
- * or their socket happens to drop.
- *
- * This mirrors the socket "disconnect" handler on purpose, and is safe to
- * run twice (the socket teardown may well write the same values a moment
- * later), because both are idempotent field updates rather than deltas.
- *
- * It is *not* unconditional, though: signing out of one tab must not mark the
- * account offline while another tab still holds a live socket, so the presence
- * ref count decides. The socket layer owns the write in that case.
- */
+
+// Clear the presence record unless another tab still holds a live socket.
 export const logout = async (
     userId: string,
 ): Promise<LogoutResponse> => {

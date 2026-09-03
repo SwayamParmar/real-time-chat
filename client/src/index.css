@@ -2,35 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─────────────────────────────────────────────────────────────
-   Global base.
-
-   This is the single source of truth for document-level styling.
-   The chat app used to inject a competing <style> block at runtime
-   (chatUtils.GlobalStyles) which reset the body background to a
-   third colour and redefined the scrollbar with different values.
-   Everything worth keeping from it now lives here.
-───────────────────────────────────────────────────────────── */
+/* ─────────────────
+  Global base.
+  Single source of truth for document-level styling.
+───────────────── */
 
 :root {
-  /* Safe-area insets, resolved once so components can compose them
-     without repeating the env() fallback dance. */
+  /* Safe-area insets, resolved once so components can compose them. */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 }
 
-/* ─── Palette ─────────────────────────────────────────────────
-   Single source of truth for colour, shared by Tailwind (via
-   tailwind.config.js) and by the inline var() styles on the
-   landing and auth pages. These tokens used to live in
-   landing.css, which is only imported by two components.
+/* ─── Palette ─────
+  Shared by Tailwind (via tailwind.config.js) and by the inline
+  var() styles on the landing and auth pages.
 
-   Each colour is stored as RGB channels so Tailwind can compose
-   opacity modifiers (bg-brand/15), with an rgb() alias beside it
-   for anything using the token directly as a colour.
-───────────────────────────────────────────────────────────── */
+  Each colour is stored as RGB channels so Tailwind can compose
+  opacity modifiers (bg-brand/15), with an rgb() alias beside it
+  for anything using the token directly.
+───────────────── */
 :root {
   --surface-base-rgb: 11 13 20;
   --surface-panel-rgb: 15 17 26;
@@ -89,8 +81,7 @@
   --shimmer: rgba(15, 23, 42, 0.06);
 }
 
-/* Direct-use aliases. Every var(--brand) style in the landing and
-   auth pages keeps working and now follows the active theme. */
+/* Direct-use aliases for the landing and auth pages. */
 :root {
   --surface-base: rgb(var(--surface-base-rgb));
   --surface-panel: rgb(var(--surface-panel-rgb));
@@ -142,23 +133,19 @@ body {
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Removes the grey flash on tap without removing any focus affordance. */
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ─── Focus ───────────────────────────────────────────────────
-   A visible, consistent keyboard-only ring. Mouse and touch users
-   never see it; keyboard users always do.
-───────────────────────────────────────────────────────────── */
+/* ─── Focus ───────
+  A visible, consistent keyboard-only ring.
+───────────────── */
 :focus-visible {
-  /* Thin and desaturated on purpose: it needs to be unmistakable to someone
-     navigating by keyboard without reading as a heavy selected-state border. */
   outline: 1px solid rgba(129, 140, 248, 0.9); /* indigo-400 */
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* ─── Scrollbars ──────────────────────────────────────────── */
+/* ─── Scrollbars  */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -193,25 +180,24 @@ body {
   scrollbar-width: none;
 }
 
-/* ─── Chat-app helpers ────────────────────────────────────── */
+/* Chat-app helpers  */
 
 /* Full viewport height that survives the mobile URL bar and the
-   on-screen keyboard. 100vh is kept as the fallback for engines
-   without dvh support. */
+   on-screen keyboard. 100vh is the fallback for engines without dvh. */
 .h-app {
   height: 100vh;
   height: 100dvh;
 }
 
-/* Scroll containers inside the chat shell must not chain their
-   overscroll to the document, or iOS rubber-bands the whole page. */
+/* Scroll containers must not chain their overscroll to the document,
+   or iOS rubber-bands the whole page. */
 .scroll-contain {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Long unbroken strings (URLs, base64, "aaaa…") must wrap inside a
-   bubble rather than forcing the bubble wider than its max-width. */
+/* Long unbroken strings (URLs, base64) wrap inside the bubble rather
+   than forcing it wider than its max-width. */
 .wrap-anywhere {
   overflow-wrap: anywhere;
   word-break: break-word;

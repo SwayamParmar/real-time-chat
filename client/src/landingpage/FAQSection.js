@@ -2,9 +2,8 @@ import React from 'react';
 import { FiChevronDown } from 'react-icons/fi';
 import useReveal from './useReveal';
 
-/* Built on native <details>/<summary>: open/close state, keyboard support and
-   screen-reader semantics come from the browser, so this section ships no
-   JavaScript of its own. */
+/* Built on native <details>/<summary>, so open/close state and keyboard
+   support come from the browser. */
 const FAQS = [
     {
         q: 'Is TalkStream free to use?',

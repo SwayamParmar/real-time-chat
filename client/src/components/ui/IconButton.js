@@ -3,10 +3,7 @@ import React from "react";
 /* ─────────────────────────────────────────────────────────────
    Icon-only button.
 
-   Most icon controls in the chat UI were bare <svg onClick>: not
-   focusable, not reachable by keyboard, invisible to screen
-   readers and roughly 16px of tap area. This gives every one of
-   them a real <button>, a mandatory label and a target that
+   A real <button> with a mandatory label and a tap target that
    clears 44px on touch without looking oversized on desktop.
 ───────────────────────────────────────────────────────────── */
 
@@ -22,10 +19,9 @@ const VARIANTS = {
 };
 
 const SIZES = {
-    // The visual box is smaller than the hit area: the padding does the
-    // touch-target work, so the icon still reads as compact.
+    // The padding does the touch-target work, so the icon stays compact.
     sm: "w-9 h-9 rounded-lg",
-    // 44px on touch, trimmed to 36px from sm up where a mouse is pointing.
+    // 44px on touch, 36px from sm up.
     md: "w-11 h-11 sm:w-9 sm:h-9 rounded-lg",
     lg: "w-11 h-11 rounded-xl",
 };

@@ -17,8 +17,7 @@ const request = (method, body) => {
 };
 
 export const useSettingsStore = create((set, get) => ({
-    // Off until the server says otherwise. Anything else means a tab whose
-    // settings fetch failed would notify while the toggle showed off.
+    // Off until the server says otherwise.
     notificationsEnabled: false,
     loaded: false,
 

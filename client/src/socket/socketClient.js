@@ -5,16 +5,14 @@ import { useAuthStore } from "../store/authStore";
 let socket;
 let heartbeatTimer;
 
-// Must stay well under the server's PRESENCE_TTL_MS so a live tab is never
-// swept as stale.
+// Must stay well under the server's PRESENCE_TTL_MS.
 const HEARTBEAT_MS = 15000;
 
 const newId = () =>
     crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 // Stable for the life of the tab. The server uses it to drop this tab's
-// previous socket when we reconnect, rather than leaving the dead one in the
-// presence set until it times out.
+// previous socket on reconnect.
 const getTabId = () => {
     try {
         let id = sessionStorage.getItem("socketTabId");
@@ -40,7 +38,6 @@ const stopHeartbeat = () => {
     heartbeatTimer = null;
 };
 
-// A tab that was asleep usually has a dead socket that has not noticed yet.
 // Reconnect on focus instead of waiting out the backoff.
 const onVisibilityChange = () => {
     if (document.visibilityState === "visible" && socket && !socket.connected) {
@@ -52,9 +49,7 @@ export const connectSocket = () => {
     const token = useAuthStore.getState().token;
     if (!token) return;
 
-    // Never stack a second socket on top of a live one: two sockets for one
-    // tab means two presence entries, and closing one used to look like the
-    // user going offline.
+    // Never stack a second socket on top of a live one.
     if (socket) return socket;
 
     socket = io(config.SOCKET_URL, {
@@ -77,8 +72,8 @@ export const connectSocket = () => {
 
     socket.on("connect_error", (err) => {
         console.error("❌ Socket error:", err.message);
-        // A rejected token fails identically every time, so retrying forever
-        // only hammers the server. Stop and let the auth layer deal with it.
+        // A rejected token fails the same way every time; let the auth layer
+        // deal with it instead of retrying forever.
         if (/token/i.test(err.message)) socket.disconnect();
     });
 
@@ -93,8 +88,7 @@ export const disconnectSocket = () => {
     stopHeartbeat();
     document.removeEventListener("visibilitychange", onVisibilityChange);
     if (socket) {
-        // Tell the server this is a deliberate sign-out, not a dropped
-        // connection, so it skips the reconnect grace period.
+        // A deliberate sign-out, so the server skips the reconnect grace.
         if (socket.connected) socket.emit("presenceLogout");
         socket.disconnect();
         socket = null;

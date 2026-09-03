@@ -29,7 +29,7 @@ import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { FaFileAlt } from "react-icons/fa";
 
 // Consecutive messages from the same person inside this window are drawn as
-// one visual run: no repeated timestamp, tight spacing, tucked corners.
+// one visual run.
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
 const formatFileSize = (bytes) => {
@@ -113,9 +113,7 @@ const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
     }, [open]);
 
     return (
-        // Beside the bubble rather than over it. Overlaid, it covered the last
-        // word of every short outgoing message — permanently on touch, where
-        // there is no hover to hide it behind.
+        // Beside the bubble rather than over it, so it cannot cover the text.
         <div ref={wrapRef} className={`flex-shrink-0 ${className}`}>
             <button
                 type="button"
@@ -124,11 +122,8 @@ const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
                 aria-expanded={open}
                 aria-haspopup="menu"
                 // The chip stays small; the button around it is a full 44px on
-                // touch, where tapping it is the only route to edit and delete.
-                //
-                // Touch has no hover, so the chip cannot hide until pointed at.
-                // It stays dimmed instead — present and reachable, but quiet
-                // enough that a screenful of them does not read as a toolbar.
+                // touch. Touch has no hover, so it stays dimmed rather than
+                // hidden.
                 className={`
                     w-11 h-11 md:w-7 md:h-7 flex items-center justify-center group/act
                     transition-opacity duration-150
@@ -149,8 +144,8 @@ const MessageActions = ({ msg, onEdit, onDelete, className = "" }) => {
             {open && (
                 <div
                     role="menu"
-                    // Opens to the right of the trigger, which sits on the far
-                    // side of the bubble — so it can never run off-screen.
+                    // Opens to the right of the trigger, so it cannot run
+                    // off-screen.
                     className="absolute left-0 top-full mt-1 w-36 py-1 z-20 animate-pop-in origin-top-left
                                bg-surface-panel border border-surface-border rounded-xl shadow-panel"
                 >
@@ -209,22 +204,13 @@ const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete, onViewIma
     const hasMedia = Boolean(msg.file?.url) && msg.messageType !== "text";
     const isFileCard = msg.messageType === "file" && Boolean(msg.file?.url);
 
-    /*
-     * Picture and video with no caption have no text line for the timestamp to
-     * share, so it floats over the bottom-right corner on a small scrim.
-     *
-     * A file card is deliberately excluded: it is opaque and already has text
-     * in that corner (the size), which the scrim would land straight on top
-     * of. It reserves room in its own last line instead — see below.
-     */
+    // An uncaptioned picture or video has no text line for the timestamp to
+    // share, so it floats over the bottom-right corner on a small scrim. File
+    // cards are excluded; they reserve room in their last line instead.
     const metaOverMedia = hasMedia && !isFileCard && !msg.content;
 
-    /*
-     * Horizontal room reserved at the end of the last text line for the
-     * timestamp, which is absolutely positioned into it. This is what keeps a
-     * short message one line tall instead of two: the meta shares the final
-     * line when it fits and drops to its own only when the text runs long.
-     */
+    // Room reserved at the end of the last text line for the timestamp, which
+    // is absolutely positioned into it. Keeps a short message one line tall.
     const metaWidth = 55 + (isMe ? 14 : 0) + (msg.isEdited ? 34 : 0);
 
     return (
@@ -275,9 +261,8 @@ const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete, onViewIma
                             className={`block w-auto max-w-full max-h-[min(340px,50dvh)] object-cover
                                         ${msg.uploading ? "opacity-50 blur-[1px]" : "cursor-pointer"}`}
                             onClick={() => !msg.uploading && onViewImage?.(msg.file)}
-                            // The photo is a control now that it opens a
-                            // viewer in place, so it is reachable and operable
-                            // without a pointer.
+                            // The photo opens a viewer, so it needs to be
+                            // operable without a pointer.
                             role={msg.uploading ? undefined : "button"}
                             tabIndex={msg.uploading ? undefined : 0}
                             onKeyDown={(e) => {
@@ -314,8 +299,7 @@ const MessageBubble = memo(({ msg, isMe, isGroupEnd, onEdit, onDelete, onViewIma
                     <video
                         src={msg.file.url}
                         controls
-                        // Only the poster frame is fetched until the user plays,
-                        // so a scrollback full of clips is not a download storm.
+                        // Only the poster frame is fetched until the user plays.
                         preload="metadata"
                         className="block max-w-full max-h-[min(340px,50dvh)] rounded-[7px]"
                     />
@@ -448,8 +432,8 @@ const ConversationRoom = ({ conversation }) => {
         const el = scrollRef.current;
         if (!el) return;
 
-        // UI only: reveal the jump-to-latest affordance once the reader has
-        // scrolled a screenful away from the newest message.
+        // Reveal the jump-to-latest button once the reader has scrolled a
+        // screenful away from the newest message.
         const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
         setShowJumpToLatest(distanceFromBottom > 240);
 
@@ -506,10 +490,8 @@ const ConversationRoom = ({ conversation }) => {
         setPendingDeleteId(null);
     };
 
-    /*
-     * Grouping and day boundaries are derived from the message list rather
-     * than stored anywhere: the store keeps exactly the shape it always had.
-     */
+    // Grouping and day boundaries are derived from the message list rather
+    // than stored.
     const rendered = useMemo(() => {
         const dayKeyOf = (m) => new Date(m.createdAt).toDateString();
         const withinWindow = (a, b) =>
@@ -522,9 +504,8 @@ const ConversationRoom = ({ conversation }) => {
 
             const showDate = !prev || dayKeyOf(prev) !== day;
 
-            // Only the *end* of a run needs marking: it carries the wider
-            // bottom margin and the rounded tail corner, which together are
-            // what separate one run from the next.
+            // Only the end of a run needs marking: it carries the wider bottom
+            // margin and the rounded tail corner.
             const continuesIntoNext =
                 next &&
                 dayKeyOf(next) === day &&
@@ -609,15 +590,9 @@ const ConversationRoom = ({ conversation }) => {
                     ) : (
                         <>
                             {/*
-                              * Pagination spinner sits above the older messages
-                              * it is fetching, not over the whole thread.
-                              *
-                              * Gated on page > 1 so it means exactly one thing:
-                              * "fetching older messages". A re-opened
-                              * conversation revalidates its cached page in the
-                              * background, and inserting a spinner above an
-                              * already-scrolled thread would shove it down and
-                              * back for no reason.
+                              * Pagination spinner, above the older messages it
+                              * is fetching. Gated on page > 1 so a background
+                              * revalidation does not shift the thread.
                               */}
                             {loadingMessages && page > 1 && <Loading width={20} height={20} label="Loading older messages" />}
 
@@ -652,10 +627,8 @@ const ConversationRoom = ({ conversation }) => {
                 </div>
 
                 {/*
-                 * There is deliberately no top scrim here. The header above is
-                 * fully opaque, so nothing scrolls out from under it that a
-                 * fade would need to soften — the old gradient only washed out
-                 * the topmost visible message.
+                 * No top scrim: the header above is fully opaque, so nothing
+                 * scrolls out from under it that a fade would need to soften.
                  */}
 
                 {/* Jump to latest */}

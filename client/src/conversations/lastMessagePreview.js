@@ -1,20 +1,14 @@
 import { HiMiniPhoto, HiVideoCamera, HiDocument } from "react-icons/hi2";
 
 /* ─────────────────────────────────────────────────────────────
-   One place that decides how a last message is summarised in the
-   conversation list.
-
-   The same four-deep nested ternary used to appear twice in
-   ConversationList — once to build a title attribute and again,
-   character for character, to build the visible row.
+   How a last message is summarised in the conversation list.
 ───────────────────────────────────────────────────────────── */
 
 /**
  * @returns {{ icon: import('react').ComponentType | null, text: string }}
  */
 export const lastMessagePreview = (message) => {
-    // No message at all: a conversation that was just started, or one whose
-    // only message has since been deleted. Both used to render a blank line.
+    // A conversation that was just started, or whose only message was deleted.
     if (!message) return { icon: null, text: "No messages" };
 
     switch (message.messageType) {

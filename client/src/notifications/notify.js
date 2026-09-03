@@ -8,12 +8,8 @@ let promptShown = false;
 
 const supported = () => typeof window !== "undefined" && "Notification" in window;
 
-/*
- * Every open tab receives the same socket event, so all of them would notify.
- * The first to claim a message id wins. The notification tag would collapse
- * duplicates visually on its own, but claiming also keeps the alert sound from
- * firing once per tab.
- */
+// Every open tab receives the same socket event, so the first tab to claim a
+// message id is the one that notifies.
 const claim = (messageId) => {
     try {
         const now = Date.now();
@@ -32,11 +28,8 @@ const claim = (messageId) => {
     }
 };
 
-/*
- * requestPermission needs a user gesture in Firefox and Safari, and we get here
- * from a socket event. So the native prompt is raised from a button the user
- * presses, not from the message that triggered this.
- */
+// Firefox and Safari require a user gesture for requestPermission, so the
+// prompt is raised from a button rather than from the socket event.
 export const requestNotificationPermission = async () => {
     if (!supported()) return "unsupported";
     if (Notification.permission !== "default") return Notification.permission;
@@ -74,12 +67,10 @@ const askOnce = () => {
 export const notifyNewMessage = ({ messageId, senderName, body, onClick }) => {
     if (!supported()) return;
 
-    // Checked before the permission prompt, so turning notifications off also
-    // stops the app asking for permission it has no use for.
+    // Checked before the permission prompt.
     if (useSettingsStore.getState().notificationsEnabled !== true) return;
 
-    // Read every time — permission can be revoked in browser settings at any
-    // point after it was granted.
+    // Read every time: permission can be revoked at any point.
     const permission = Notification.permission;
     if (permission === "denied") return;
     if (permission !== "granted") {

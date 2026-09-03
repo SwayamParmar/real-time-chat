@@ -2,9 +2,8 @@
 const config = {
   content: ["./src/**/*.{html,js,jsx,ts,tsx}"],
   theme: {
-    // Declared in full (rather than via extend) so the extra 'xs' breakpoint
-    // is emitted in ascending order. Tailwind appends extended screens after
-    // 2xl, which would let an xs: rule override an sm: rule on wide screens.
+    // Declared in full rather than via extend, so the extra 'xs' breakpoint is
+    // emitted in ascending order instead of being appended after 2xl.
     screens: {
       xs: "380px",
       sm: "640px",
@@ -30,9 +29,9 @@ const config = {
       },
 
       colors: {
-        // Every token below resolves through a CSS variable defined in
-        // index.css, so the whole palette follows [data-theme]. Channels are
-        // space-separated to keep opacity modifiers (bg-brand/15) working.
+        // Every token below resolves through a CSS variable in index.css, so
+        // the palette follows [data-theme]. Channels are space-separated to
+        // keep opacity modifiers (bg-brand/15) working.
         surface: {
           base: 'rgb(var(--surface-base-rgb) / <alpha-value>)',
           panel: 'rgb(var(--surface-panel-rgb) / <alpha-value>)',
@@ -67,8 +66,7 @@ const config = {
           soft: 'rgb(var(--danger-rgb) / 0.12)',
         },
 
-        // Deterministic per-user avatar tints. Saturated enough to read on
-        // either theme, so they are not themed.
+        // Per-user avatar tints. Readable on either theme, so not themed.
         avatar: {
           1: '#6366F1', // indigo
           2: '#8B5CF6', // violet
@@ -90,8 +88,6 @@ const config = {
 
       borderRadius: {
         // Bubble corners: rounded on three sides, tucked on the tail side.
-        // Kept at 10px — enough to read as a bubble, tight enough that a long
-        // thread does not look like a column of pills.
         "bubble-me": "10px 10px 3px 10px",
         "bubble-them": "10px 10px 10px 3px",
         "bubble-mid-me": "10px 3px 3px 10px",
@@ -126,7 +122,7 @@ const config = {
           "50%": { opacity: 1 },
         },
 
-        // Popovers / dropdowns — fast enough not to feel laggy.
+        // Popovers / dropdowns.
         popIn: {
           "0%": { opacity: 0, transform: "scale(0.96) translateY(4px)" },
           "100%": { opacity: 1, transform: "scale(1) translateY(0)" },

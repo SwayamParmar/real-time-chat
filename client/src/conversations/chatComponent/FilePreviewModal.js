@@ -7,17 +7,8 @@ import IconButton from "../../components/ui/IconButton";
 /* ─────────────────────────────────────────────────────────────
    Attachment review before sending.
 
-   Behaviour is unchanged — it still hands { files, caption } to
-   onSend and closes immediately so the upload runs in the
-   background. The rewrite is about the shell:
-
-     • thumbnail blob URLs are created once per file instead of
-       once per file *per render*, which was leaking one object
-       URL every time the component re-rendered
-     • it is a labelled dialog with Escape and a trapped tab
-       order rather than an unannounced div
-     • the layout survives a 320px screen and clears the home
-       indicator
+   Hands { files, caption } to onSend and closes immediately, so
+   the upload runs in the background.
 ───────────────────────────────────────────────────────────── */
 
 const formatFileSize = (bytes) => {
@@ -49,12 +40,8 @@ const FilePreviewModal = ({ files, onClose, onSend }) => {
     const isImage = currentFile?.type?.startsWith("image/");
     const isVideo = currentFile?.type?.startsWith("video/");
 
-    /*
-     * One object URL per file, created when the file list changes and revoked
-     * when it changes again or the dialog unmounts. The previous version
-     * called URL.createObjectURL inside the thumbnail map, so every render
-     * minted a fresh URL for every attachment and never released any of them.
-     */
+    // One object URL per file, created when the file list changes and revoked
+    // when it changes again or the dialog unmounts.
     const previewUrls = useMemo(
         () => allFiles.map((file) => URL.createObjectURL(file)),
         [allFiles]
@@ -94,8 +81,7 @@ const FilePreviewModal = ({ files, onClose, onSend }) => {
         setSelectedIndex(0);
     }, [files]);
 
-    // Move focus into the dialog on open so keyboard and screen-reader users
-    // land on the caption field rather than back at the top of the page.
+    // Move focus into the dialog on open, onto the caption field.
     useEffect(() => {
         panelRef.current?.focus();
     }, []);

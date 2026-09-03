@@ -3,20 +3,17 @@ import React from "react";
 /* ─────────────────────────────────────────────────────────────
    TalkStream mark.
 
-   Rendered as inline SVG rather than the 195 KB logo_icon.png:
-   it costs zero network requests, stays crisp at every size, and
-   is painted with the first frame instead of after an image load.
-   The gradient keeps the original chevron identity (indigo →
-   violet → cyan) and is driven by the shared brand palette.
+   Inline SVG rather than logo_icon.png, so it costs no network
+   request and stays crisp at every size. The gradient is driven
+   by the shared brand palette.
 ───────────────────────────────────────────────────────────── */
 
 // Exported on its own for in-app chrome (the nav rail, the mobile list
-// header) where the mark is decoration and must NOT be a link back to "/" —
-// following it there triggers a full document reload of the chat client.
+// header), where the mark is decoration and must not link back to "/".
 export const LogoMark = ({ className }) => {
-    // Unique per instance so multiple logos on one page don't collide on the
-    // gradient id. Colons are stripped because useId emits ":r1:"-style values,
-    // which some engines refuse to resolve inside url(#...).
+    // Unique per instance so two logos on one page do not collide on the
+    // gradient id. Colons are stripped: useId emits ":r1:"-style values, which
+    // some engines refuse to resolve inside url(#...).
     const id = `ts-logo-${React.useId().replace(/:/g, "")}`;
 
     return (

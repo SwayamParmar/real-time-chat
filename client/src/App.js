@@ -6,16 +6,9 @@ import { useAuthStore } from "./store/authStore";
 import { Navigate } from "react-router-dom";
 
 /*
- * Route-level code splitting.
- *
- * These three used to be part of the entry bundle, which meant every visitor
- * to the landing page also downloaded the whole chat client — socket.io-client,
- * date-fns, styled-components and several icon packs — before anything painted.
- * Splitting them keeps the public landing page lightweight; the chat chunk is
- * fetched only once a signed-in user actually needs it.
- *
- * Home stays eager: it is the public entry point, and its own below-the-fold
- * sections are already split inside pages/Home.js.
+ * Route-level code splitting, so a visitor to the landing page does not also
+ * download the chat client. Home stays eager as the public entry point; its
+ * below-the-fold sections are split inside pages/Home.js.
  */
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));

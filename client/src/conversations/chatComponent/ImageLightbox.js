@@ -6,17 +6,11 @@ import IconButton from "../../components/ui/IconButton";
 /* ─────────────────────────────────────────────────────────────
    Full-size image viewer.
 
-   Tapping a photo used to call window.open(url, "_blank"), which
-   handed the picture to the browser: a new tab on desktop, a
-   context switch out of the app on a phone, and on iOS a popup
-   the browser may block outright. Nothing about it belonged to
-   the conversation you were reading.
-
-   Deliberately not built on the shared Modal — that one is a
-   440px panel with a header, sized for forms. A photo wants the
-   whole viewport and no chrome around it. What it does borrow is
-   the behaviour: Escape closes, the backdrop closes, focus moves
-   in and is handed back, and the page behind does not scroll.
+   Not built on the shared Modal, which is a 440px panel sized
+   for forms; a photo wants the whole viewport and no chrome.
+   The behaviour is the same: Escape closes, the backdrop closes,
+   focus moves in and is handed back, and the page behind does
+   not scroll.
 ───────────────────────────────────────────────────────────── */
 
 const ImageLightbox = ({ src, alt, onClose }) => {
@@ -33,8 +27,7 @@ const ImageLightbox = ({ src, alt, onClose }) => {
 
         const onKeyDown = (e) => {
             if (e.key !== "Escape") return;
-            // Stop the chat shell's own Escape handler from also backing out
-            // of the conversation behind this.
+            // Stop the chat shell's Escape handler from also firing.
             e.stopPropagation();
             onClose?.();
         };
@@ -55,8 +48,7 @@ const ImageLightbox = ({ src, alt, onClose }) => {
             className="fixed inset-0 z-[200] flex items-center justify-center
                        bg-black/90 backdrop-blur-sm animate-fade-in
                        p-3 sm:p-8"
-            // Only a click that starts and ends on the backdrop dismisses, so
-            // a drag that finishes off the photo does not close the viewer.
+            // Only a click that starts and ends on the backdrop dismisses.
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget) onClose?.();
             }}

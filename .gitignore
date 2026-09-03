@@ -13,3 +13,4 @@ server/dist/
 # Ignore OS-specific files
 .DS_Store
 Thumbs.db
+CLAUDE.md

@@ -12,23 +12,13 @@ import { Avatar } from "../chatUtils";
 /* ─────────────────────────────────────────────────────────────
    "New conversation" picker.
 
-   Selection logic is untouched: it still reuses an existing
-   conversation when there is one, otherwise calls
-   startConversation, then fetchMessages.
-
-   The chrome around it was a white card in a dark app, pinned to
-   a fixed 400px width (so it overflowed every phone), with a
-   Cancel button wired to a prop that was never passed. It now
-   uses the shared Modal, which docks to the bottom as a sheet on
-   phones and brings Escape, backdrop dismissal, focus handling
-   and dialog semantics with it.
+   Reuses an existing conversation when there is one, otherwise
+   calls startConversation, then fetchMessages. Built on the
+   shared Modal.
 ───────────────────────────────────────────────────────────── */
 
-/*
- * The list scrolls once it passes seven people, on phones and desktop alike.
- * The row height is fixed so that cut-off lands on a row boundary rather than
- * mid-row: 40px avatar + 2 × 10px vertical padding.
- */
+// The list scrolls past seven people. The row height is fixed so the cut-off
+// lands on a row boundary: 40px avatar + 2 × 10px vertical padding.
 const MAX_VISIBLE_USERS = 7;
 const USER_ROW_HEIGHT = 60;
 
@@ -57,8 +47,7 @@ const StartConversation = ({ onClose }) => {
         []
     );
 
-    // Cancel any in-flight debounce on unmount, so a trailing call cannot
-    // set state on a dialog that has already closed.
+    // Cancel any in-flight debounce on unmount.
     useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
 
     useEffect(() => {

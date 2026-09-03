@@ -4,15 +4,8 @@ import ProfileMenu from "./chatComponent/ProfileMenu";
 /* ─────────────────────────────────────────────────────────────
    Left nav rail — desktop only.
 
-   Below md the rail is hidden: 64px of chrome next to a 360px
-   list left roughly nothing for the chat pane on a phone, and
-   three of its four destinations are not built yet. The mark and
-   the profile move into the conversation-list header there.
-
-   The rail's own visual identity is unchanged; what changed is
-   that its buttons are labelled, the active one is announced,
-   and the ones with nothing behind them say so instead of
-   looking live.
+   Hidden below md, where the mark and the profile move into the
+   conversation-list header instead.
 ───────────────────────────────────────────────────────────── */
 
 const NAV_ITEMS = [

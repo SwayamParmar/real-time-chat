@@ -7,10 +7,8 @@ import Header from '../landingpage/Header';
 import HeroSection from '../landingpage/HeroSection';
 
 // ── Below the fold: split into separate chunks ──────────────────────────────
-// Everything past the hero moves out of the entry bundle. The browser still
-// requests these chunks straight away (in parallel, alongside the main one),
-// but the hero can parse, execute and paint without waiting on them — which
-// is what matters for first paint on a slow mobile connection.
+// Everything past the hero moves out of the entry bundle, so the hero can
+// paint without waiting on it.
 const StatsStrip = lazy(() => import('../landingpage/StatsStrip'));
 const FeaturesSection = lazy(() => import('../landingpage/FeaturesSection'));
 const HowItWorksSection = lazy(() => import('../landingpage/HowItWorksSection'));
@@ -22,8 +20,8 @@ const CTASection = lazy(() => import('../landingpage/CTASection'));
 const Footer = lazy(() => import('../landingpage/Footer'));
 
 /**
- * Reserves vertical space while a lazy section is still loading, so the page
- * does not shift as chunks arrive (CLS stays at zero).
+ * Reserves vertical space while a lazy section loads, so the page does not
+ * shift as chunks arrive.
  */
 const SectionFallback = ({ minHeight = 420 }) => (
     <div style={{ minHeight }} aria-hidden="true" />

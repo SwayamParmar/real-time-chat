@@ -9,7 +9,7 @@ import ProfileMenu from "./ProfileMenu";
    Conversation-list header: brand, new-chat action, search.
 
    Search is controlled from ConversationList, which owns the
-   filtering. Nothing here talks to the store or the network.
+   filtering.
 ───────────────────────────────────────────────────────────── */
 
 const ConversationListHeader = ({ search, onSearchChange }) => {

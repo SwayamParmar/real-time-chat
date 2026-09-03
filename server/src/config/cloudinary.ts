@@ -9,13 +9,10 @@ cloudinary.config({
 });
 
 /**
- * Extract public_id from a Cloudinary URL.
+ * Extract the public_id from a Cloudinary URL.
  *
- * Example:
- * https://res.cloudinary.com/cloud/image/upload/v123/chatapp/filename.jpg
- *
- * Result:
- * chatapp/filename
+ * https://res.cloudinary.com/cloud/image/upload/v123/chatapp/file.jpg
+ *   -> chatapp/file
  */
 const getPublicId = (url: string): string => {
     const parts = url.split("/");
@@ -24,11 +21,8 @@ const getPublicId = (url: string): string => {
         throw new Error("Invalid Cloudinary URL");
     }
 
-    // Everything after "upload"
     const withVersion = parts.slice(uploadIndex + 1).join("/");
-    // Remove version segment such as v1234567/
     const withoutVersion = withVersion.replace(/^v\d+\//, "");
-    // Remove file extension
     return withoutVersion.replace(/\.[^/.]+$/, "");
 };
 

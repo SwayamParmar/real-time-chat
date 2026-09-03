@@ -5,16 +5,15 @@ import TalkStreamLogo from '../components/TalkStreamLogo';
 
 const GITHUB_URL = 'https://github.com/SwayamParmar/real-time-chat';
 
-// TODO: replace the LinkedIn and email placeholders with your own before
-// deploying — they are intentionally left generic rather than guessed.
+// TODO: replace the LinkedIn and email placeholders before deploying.
 const SOCIAL = [
     { Icon: FiGithub, label: 'GitHub', href: GITHUB_URL, external: true },
     { Icon: FiLinkedin, label: 'LinkedIn', href: 'https://www.linkedin.com/in/swayam-parmar-988a45214', external: true },
     { Icon: FiMail, label: 'Email', href: 'mailto:swayam.parmar.dev@gmail.com', external: false },
 ];
 
-/* Column links: in-page anchors keep the smooth-scroll behaviour, while
-   route links go through the router so they never trigger a full reload. */
+/* In-page anchors keep the smooth-scroll behaviour; route links go through
+   the router so they do not trigger a full reload. */
 const COLUMNS = [
     {
         title: 'Product',

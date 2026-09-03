@@ -3,15 +3,11 @@ import { Link } from 'react-router-dom';
 import { FiZap, FiEye, FiPaperclip, FiShield, FiArrowLeft } from 'react-icons/fi';
 import TalkStreamLogo from './TalkStreamLogo';
 
-// Shares the landing page's tokens (--brand, --surface-*) and the
-// .font-display / .btn helpers, so auth matches the marketing pages exactly.
+// Shares the landing page's tokens and .font-display / .btn helpers.
 import '../landingpage/landing.css';
 
 /* ─────────────────────────────────────────────────────────────
    Shared chrome for the Login and Signup pages.
-
-   Purely presentational: it renders whatever form is passed as
-   children and never touches form state, validation or submission.
 ───────────────────────────────────────────────────────────── */
 
 const HIGHLIGHTS = [
